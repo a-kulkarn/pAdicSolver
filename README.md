@@ -1,4 +1,4 @@
-The package `AlgebraicSolvers.jl` provides tools for solving polynomial equations
+The package `AlgebraicSolvers.jl` provides some tools for solving polynomial equations
 
 To install the package within julia:
 
@@ -13,7 +13,7 @@ To use it within julia:
 ```julia
 using AlgebraicSolvers
 
-X = @ring x1 x2 x3
+X = @Ring x1 x2 x3
 n = length(X)
 
 d = 3
