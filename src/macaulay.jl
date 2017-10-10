@@ -1,5 +1,3 @@
-import DynamicPolynomials: Monomial
-import PolyExp: monoms
 export macaulay_mat, qr_basis, solve_macaulay
 
 function is_not_homogeneous(p)
@@ -12,7 +10,7 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
     if ish
         Q = [monomials(X,d-degree(P[i])) for i in 1:length(P)]
     else
-        Q = [monoms(X,d-degree(P[i])) for i in 1:length(P)]
+        Q = [monomials(X,0:d-degree(P[i])) for i in 1:length(P)]
     end
     M = []
     for i in 1:length(P)

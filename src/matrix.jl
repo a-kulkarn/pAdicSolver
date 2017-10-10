@@ -156,6 +156,19 @@ function eigdiag(M)
     X
 end
 
+function (p::Polynomial{B,T})(x::Vector) where {B,T}
+   r = zero(x[1]);
+   for m in p
+      t=m.α
+      for i in 1:length(m.x.z)
+      	 t*=x[i]^m.x.z[i]
+      end
+      r+=t
+   end
+   r
+end
+
+
 """
 Vector of relative errors of P at the points X
 """
