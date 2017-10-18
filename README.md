@@ -4,7 +4,6 @@ To install the package within julia:
 
 ```julia
 Pkg.clone("https://gitlab.inria.fr/AlgebraicGeometricModeling/AlgebraicSolvers.jl.git")
-Pkg.build("AlgebraicSolvers")
 ```
 
 

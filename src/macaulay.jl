@@ -36,7 +36,8 @@ function qr_basis(N, L, ish = false)
         end
     end
     N0
-    F= qrfact(N0, Val(true))
+    #    F= qrfact(N0, Val(true))
+        F= qrfact(N0, Val{true})
     B = []
     for i in 1:size(N,2)
         push!(B,L0[F[:p][i]])
