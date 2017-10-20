@@ -35,9 +35,9 @@ function qr_basis(N, L, ish = false)
             N0[j,i]= N[get(Idx,L0[i],0),j]
         end
     end
-    N0
-    #    F= qrfact(N0, Val(true))
-        F= qrfact(N0, Val{true})
+    
+    # F= qrfact(N0, Val(true))
+    F = qrfact(N0, Val{true})
     B = []
     for i in 1:size(N,2)
         push!(B,L0[F[:p][i]])
@@ -48,7 +48,7 @@ function qr_basis(N, L, ish = false)
             B[i] = B[i]*X[1]^(-1)
         end
     end
-    B
+    B, N*F[:Q]
 end
     
 solve_macaulay = function(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1 )
@@ -67,18 +67,17 @@ solve_macaulay = function(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) 
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
     N = nullspace(R)
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
-    B = qr_basis(N, L, ish)
+    B, Nr = qr_basis(N, L, ish)
     println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
-    M = mult_matrix(B, X, N, idx(L), ish)
+    M = mult_matrix(B, X, Nr, idx(L), ish)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
     Xi = eigdiag(M)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
-    #println("-- Rel. error ", eigdiag_error(M,Xi,Y,Z))
     if (!ish)
-        Xi = diagm([1/Xi[i,1] for i in 1:length(B)])*Xi
+        for i in 1:size(Xi,1) Xi[i,:]/=Xi[i,1] end
         Xi = Xi[:,2:size(Xi,2)]
     else
-        Xi = diagm([1/norm(Xi[i,:]) for i in 1:length(B)])*Xi
+        for i in 1:size(Xi,1) Xi[i,:]/=norm(Xi[i,:]) end
     end
     Xi
 end

@@ -134,16 +134,23 @@ function mult_matrix(B, X, K, KM, ish = false)
 end
 
 function eigdiag(M)
-    #    t0 = time()
     M0 = sum(M[i]*rand() for i in 1:length(M))
+    #t0=time()
+    I0 = inv(M0)
+    #println("... inv   ", time()-t0, "(s)"); t0=time()
+    MM0 = I0*M[1]
 
-    t0 = time();
-    MM0 = M0\M[1]
-    #println("   -- M0\Mi ", time()-t0, "(s)"); t0=time()
     E  = eigvecs(MM0)
-    #println("   -- Eigen ", time()-t0, "(s)")
-    Y  = M0*E
-    Z  = inv(E)
+    #println("... eig   ", time()-t0, "(s)"); t0=time()
+    Z  = E\I0
+
+
+    #t0 = time()
+    #F = schurfact(MM0)
+    #println("... schur ", time()-t0, "(s)"); t0=time()
+    # E = F[:vectors]
+    # Z = E'
+
     X = fill(Complex{Float64}(0.0),size(M0,1),length(M))
     for j in 1:length(M)
         Yj = Z*M[j]*E
@@ -172,15 +179,16 @@ end
 """
 Vector of relative errors of P at the points X
 """
-function rel_error(p, Xi::Matrix)
-    r  = fill(0.0,size(Xi,1), length(p))
+function rel_error(p, Xi::Matrix, X = variables(p))
+    r = fill(0.0, size(Xi,1), length(p))
+    n = size(Xi,2)
     for i in 1: size(Xi,1)
         for j in 1:length(p)
             V = Xi[i,:]
-            r[i,j]= norm(p[j](V))
+            r[i,j]= norm(subs(p[j],X=>V))
             s = 0.0
             for t in p[j]
-                s+=abs(t.α)*prod(abs(V[l])^(t.x.z[l]) for l in 1:length(V))
+                s+= norm(subs(t, X => V))
             end
             r[i,j]/=s
         end
