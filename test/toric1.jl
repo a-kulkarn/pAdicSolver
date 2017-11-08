@@ -12,16 +12,7 @@ P= [p1,p2]
 
 Xi = solve_toric(P,X)
 
-#Err = norm_eval(P,Xi,X)
-#println("-- Eval err: ", norm(Err,Inf), "   ",time()-t0, "(s)"); t0 = time()
-
-Xi
-# R, L = toric_mat(P, map(p->support(p),P))
-
-# N = nullspace(R)
-
-# B = [one(X), x1]
-
-# M = matmult(B,X,N,idx(L))
-# Xi, Y, Z = eigdiag(M)
+println("-- sol ", Xi)
+Er = rel_error(P,Xi,X)
+println("-- Rel error: ", norm(Er,Inf));
 

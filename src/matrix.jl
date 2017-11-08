@@ -95,7 +95,7 @@ function mult_basis(N, L::Vector{T}, X) where T
         end
     end
     N0
-    F= qrfact(N0, Val(true))
+    F = qrfact(N0, Val{true})
     B = []
     for i in 1:size(N,2)
         push!(B,L0[F[:p][i]])
@@ -138,15 +138,14 @@ function eigdiag(M)
     #t0=time()
     I0 = inv(M0)
     #println("... inv   ", time()-t0, "(s)"); t0=time()
-    MM0 = I0*M[1]
+    Mg = I0*M[1]
 
-    E  = eigvecs(MM0)
+    E  = eigvecs(Mg)
     #println("... eig   ", time()-t0, "(s)"); t0=time()
     Z  = E\I0
 
-
     #t0 = time()
-    #F = schurfact(MM0)
+    #F = schurfact(Mg)
     #println("... schur ", time()-t0, "(s)"); t0=time()
     # E = F[:vectors]
     # Z = E'
@@ -159,7 +158,6 @@ function eigdiag(M)
             X[i,j]= Yj[i,i] #(Y[:,i]\Yj[:,i])[1] #D[i,i]
         end
     end
-    #    X, Y, Z
     X
 end
 

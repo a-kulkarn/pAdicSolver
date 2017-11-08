@@ -28,6 +28,7 @@ function toric_mat(P, A)
     R, L
 end
 
+
 function solve_toric(P, X)
     t0 = time()
     A = [support(p) for p in P]
@@ -35,17 +36,16 @@ function solve_toric(P, X)
     println("-- Toric matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
     N = nullspace(R)
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
+
     B = mult_basis(N, L, X)
     println("-- Basis ", B, "  ", time()-t0, "(s)"); t0 = time()
 
-    M = mult_matrix(B, X, N, idx(L))
+    M = mult_matrix(B, X, N, idx(L), false)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
 
-    Xi, Y, Z = eigdiag(M)
+    Xi = eigdiag(M)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
-    println("-- Eigen diag err: ", eigdiag_error(M,Xi,Y,Z))
-
-    Xi = diagm([1/Xi[i,1] for i in 1:length(B)])*Xi
+    for i in 1:size(Xi,1) Xi[i,:]/=Xi[i,1] end
     Xi = Xi[:,2:size(Xi,2)]
     Xi
 end
