@@ -45,6 +45,7 @@ function solve_toric(P, X)
 
     Xi = eigdiag(M)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
+
     for i in 1:size(Xi,1) Xi[i,:]/=Xi[i,1] end
     Xi = Xi[:,2:size(Xi,2)]
     Xi

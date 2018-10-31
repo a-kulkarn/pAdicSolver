@@ -1,10 +1,13 @@
 export macaulay_mat, qr_basis, solve_macaulay
 
+using LinearAlgebra
+using DynamicPolynomials
+
 function is_not_homogeneous(p)
     L = [degree(t) for t in p]
     maximum(L) != minimum(L)
 end
-    
+
 function macaulay_mat(P, L::AbstractVector, X, ish = false )
     d = maximum([degree(m) for m in L])
     if ish
@@ -35,27 +38,31 @@ function qr_basis(N, L, ish = false)
             N0[j,i]= N[get(Idx,L0[i],0),j]
         end
     end
-    
+
     # F= qrfact(N0, Val(true))
-    F = qrfact(N0, Val{true})
+    F = qr(N0,Val(true))
     B = []
-    for i in 1:size(N,2)
-        push!(B,L0[F[:p][i]])
-    end
     if ish
-        X = variables(L[1])
-        for i in 1:length(B)
-            B[i] = B[i]*X[1]^(-1)
+        for i in 1:size(N,2)
+            m = copy(L0[F.p[i]])
+            m.z[1]-=1
+            push!(B, m)
+            # should test if the diag. coeff. is not small
+        end
+    else
+        for i in 1:size(N,2)
+            push!(B, L0[F.p[i]])
+        # should test if the diag. coeff. is not small
         end
     end
-    B, N*F[:Q]
+    B, N*F.Q
 end
-    
+
 solve_macaulay = function(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1 )
     println()
     println("-- Degrees ", map(p->degree(p),P))
     ish = !any(is_not_homogeneous, P)
-    println("-- Homogeneity ",ish)
+    println("-- Homogeneity ", ish)
     if ish
         L = [m for m in monomials(X, rho)]
     else

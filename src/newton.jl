@@ -1,6 +1,6 @@
 export der, alpha_beta, jacobian, newton_iter, newton_improve, rel_error
 
-function der{C,T}(p::Polynomial{C,T}, v::PolyVar{C})
+function der(p::Polynomial{C,T}, v::PolyVar{C}) where {C,T}
     r = zero(p)
     X = variables(p)
     i = findfirst(X, v)
@@ -41,7 +41,7 @@ function newton_iter(F, J, Xi)
     Xi, err
 end
 
-    
+
 function newton_improve(Xi::Matrix, P, X,  eps::Float64=1.e-12, Nit::Int64 = 20)
     J = jacobian(P,X)
     for j in 1: size(Xi,1)
@@ -93,7 +93,7 @@ function alpha_beta(P::Vector, Xi::Vector)
     mu =  sqrt(sum(norm(p,degree(p))^2 for p in P))
     mu *= norm(J0\diagm([sqrt(degree(p))*s^(degree(p)-1) for p in P]))
 
-    d  = maximum([degree(p) for p in P])    
+    d  = maximum([degree(p) for p in P])
     gamma = 0.5*d*sqrt(d)*mu
 
     beta*gamma, 2*beta

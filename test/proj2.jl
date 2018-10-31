@@ -3,7 +3,7 @@ using AlgebraicSolvers
 X = @Ring x1 x2 x3
 n = length(X)
 
-d = 5
+d = 2
 M = monomials(X,0:d)
 s = length(M)
 

@@ -1,6 +1,7 @@
 export matrix, smatrix, mult_basis, mult_matrix, eigdiag, kernel, rel_error
 
-import Base: nullspace
+import LinearAlgebra: nullspace
+using SparseArrays
 
 function kernel(A::Matrix)
     U,S,V = svd(A)
@@ -27,7 +28,7 @@ function nullspace(A::AbstractSparseMatrix)
     # Pi = fill(0, length(P))
     # for i in 1:length(P) Pi[P[i]]= i end
     # F[:Q][Pi,r+1:end]
-   
+
     F = lufact(A')
     U = F[:U]
     r = 1
@@ -44,7 +45,7 @@ function nullspace(A::AbstractSparseMatrix)
     P = fill(0, size(A,2))
     for i in 1:size(A,2) P[F[:p][i]]= i end
     return (F[:Rs] .* N[P,:])
-    
+
 end
 
 function matrix(P::Vector, M::MonomialIdx)
@@ -106,14 +107,14 @@ end
 function mult_matrix(B, X, K, KM, ish = false)
     R = []
     Idx = idx(B)
-    if !ish 
+    if !ish
         M = fill(0.0, length(B), size(K,2) )
         for (m,i) in Idx.terms
             k = get(KM, m, 0)
             if k != 0
                 for j in 1:size(K,2)
                     M[i,j] = K[k,j]
-                end 
+                end
             end
         end
         push!(R,M)
@@ -121,12 +122,12 @@ function mult_matrix(B, X, K, KM, ish = false)
     for v in X
         M = fill(0.0, length(B), size(K,2) )
         for (m,i) in Idx.terms
-            k = get(KM,m*v,0)
+            k = get(KM, m*v, 0)
             if k != 0
                 for j in 1:size(K,2)
                     M[i,j] = K[k,j]
-                end 
-            end 
+                end
+            end
         end
         push!(R,M)
     end

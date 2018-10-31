@@ -1,6 +1,6 @@
 import Base:
-    zero, one, show, showcompact, print, length, endof, getindex, setindex!, copy, promote_rule, convert, start, next, done, eltype, get
-    *, /, //, -, +, ==, ^, divrem, conj, rem, real, imag, diff, norm
+    zero, one, show, print, length, getindex, setindex!, copy, promote_rule, convert, eltype, get
+    *, /, //, -, +, ==, ^, divrem, conj, rem, real, imag, diff
 
 export idx, rev_idx, length
 
@@ -12,7 +12,7 @@ MonomialIdx() =  MonomialIdx(Dict{DynamicPolynomials.Monomial{true},Int64}())
 
 get(p::MonomialIdx, m::DynamicPolynomials.Monomial{true}, df:: Int64) = get(p.terms, m, df)
 
-function setindex!(p::MonomialIdx, v, m::Monomial{true})
+function Base.setindex!(p::MonomialIdx, v::Int64, m::DynamicPolynomials.Monomial{true})
     (p.terms)[m] = v
 end
 
