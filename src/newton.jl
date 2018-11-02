@@ -91,7 +91,7 @@ function alpha_beta(P::Vector, Xi::Vector)
 
     s  =  sqrt(1 + norm(Xi)^2)
     mu =  sqrt(sum(norm(p,degree(p))^2 for p in P))
-    mu *= norm(J0\diagm([sqrt(degree(p))*s^(degree(p)-1) for p in P]))
+    mu *= norm(J0\diagm(0 => [sqrt(degree(p))*s^(degree(p)-1) for p in P]))
 
     d  = maximum([degree(p) for p in P])
     gamma = 0.5*d*sqrt(d)*mu
