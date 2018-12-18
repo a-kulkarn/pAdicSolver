@@ -104,6 +104,10 @@ function mult_basis(N, L::Vector{T}, X) where T
     B
 end
 
+##################################################################
+## AVI: this looks like the part we care about.
+
+
 function mult_matrix(B, X, K, KM, ish = false)
     R = []
     Idx = idx(B)
@@ -173,6 +177,8 @@ function (p::Polynomial{B,T})(x::Vector) where {B,T}
    end
    r
 end
+
+##################################################################
 
 
 """

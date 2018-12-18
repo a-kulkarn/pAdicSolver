@@ -15,12 +15,16 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
     else
         Q = [monomials(X,0:d-degree(P[i])) for i in 1:length(P)]
     end
+
+    ### this looks like it can be inlined
     M = []
     for i in 1:length(P)
         for m in Q[i]
             push!(M,P[i]*m)
         end
     end
+    ###
+    
     matrix(M,idx(L))
 end
 
@@ -58,6 +62,16 @@ function qr_basis(N, L, ish = false)
     B, N*F.Q
 end
 
+# AVI: Main solver function, for us anyways.
+# calls to:
+# macaulay_mat
+# nullspace
+# qr_basis
+# mult_matrix
+# eigdiag
+#------------
+# call to the qr intrinsic likely uses float (not p-adic) arithmetic.
+#-------------------
 solve_macaulay = function(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1 )
     println()
     println("-- Degrees ", map(p->degree(p),P))
@@ -70,14 +84,19 @@ solve_macaulay = function(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) 
     end
     t0 = time()
     println("-- Monomials ", length(L), " degree ", rho,"   ",time()-t0, "(s)"); t0 = time()
+
     R = macaulay_mat(P, L, X, ish)
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
+
     N = nullspace(R)
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
+
     B, Nr = qr_basis(N, L, ish)
     println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
+
     M = mult_matrix(B, X, Nr, idx(L), ish)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
+
     Xi = eigdiag(M)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
     if (!ish)
