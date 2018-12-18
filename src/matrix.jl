@@ -154,7 +154,7 @@ function mult_matrix(B, X, K, L, ish = false)
     if !ish Y = vcat([DynamicPolynomials.Monomial{true}(1)],X) else Y = X end
 
     function construct_monomial_mult_matrix(v)
-        M = fill(0.0, length(B), size(K,2) )
+        M = fill( eltype(K)(0), length(B), size(K,2) )
         for (m,i) in Idx.terms
             k = get(KM, m*v, 0)
             if k != 0
@@ -168,6 +168,7 @@ function mult_matrix(B, X, K, L, ish = false)
 end
 
 ## PREC: The eigvecs function probably needs a p-adic version.
+## also, rand() as well.
 function eigdiag(M)
     M0 = sum(M[i]*rand() for i in 1:length(M))
     #t0=time()
