@@ -32,7 +32,8 @@ end
 
 
 # Given the nullspace of an operator N,
-# compute a QR basis B 
+# compute a QR basis B
+# also return N*Q. There is likely some trickery here... (this is probably R?)
 function qr_basis(N, L, ish = false)
     Idx= idx(L)
     if ish
@@ -41,6 +42,7 @@ function qr_basis(N, L, ish = false)
         d  = maximum([degree(m) for m in L])
         L0 = filter(m->degree(m)<d,L)
     end
+    
     N0 = fill(zero(N[1,1]), size(N,2),length(L0))
     for i in 1:length(L0)
         for j in 1:size(N,2)

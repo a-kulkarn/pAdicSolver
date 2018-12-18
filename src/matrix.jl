@@ -1,7 +1,7 @@
 export matrix, smatrix, mult_basis, mult_matrix, eigdiag, kernel, rel_error
 
 import LinearAlgebra: nullspace
-using SparseArrays
+#using SparseArrays
 
 #=
 function kernel(A::Matrix)
@@ -141,11 +141,11 @@ end
 # INPUTS:
 #  B -- basis for QR factorization
 #  X -- variables for the polynomial ring
-#  K -- ????
-#  KM-- ????
+#  K -- ????  (probably the R in the QR)
+#  KM-- Monomial basis in which K is expressed.  
 #  ish- the "is_homogeneous" boolian.
 # OUTPUT:
-# ????
+# a list of matrices whose eigenvalues are the solution coordinates.
 function mult_matrix(B, X, K, KM, ish = false)
     R = []
     Idx = idx(B)
@@ -205,6 +205,8 @@ function eigdiag(M)
     X
 end
 
+## Looks like a function for evaluating a polynomial at a vector?
+## WARNING: It allows you to evaluate at a vector that is too long...
 function (p::Polynomial{B,T})(x::Vector) where {B,T}
    r = zero(x[1]);
    for m in p
@@ -219,7 +221,9 @@ end
 
 ##################################################################
 
-#=
+# AVI: Function used for testing (over C). Not a dependency of core
+# methods.
+
 """
 Vector of relative errors of P at the points X
 """
@@ -239,4 +243,4 @@ function rel_error(p, Xi::Matrix, X = variables(p))
     end
     r
 end
-=#
+
