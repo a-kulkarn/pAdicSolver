@@ -106,7 +106,7 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     B, Nr = qr_basis(N, L, ish)
     println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
 
-    M = mult_matrix(B, X, Nr, idx(L), ish)
+    M = mult_matrix(B, X, Nr, L, ish)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
 
     Xi = eigdiag(M)

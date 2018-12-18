@@ -142,7 +142,7 @@ end
 #  B -- basis for QR factorization
 #  X -- variables for the polynomial ring
 #  K -- ????  (K = RQ I think, c.f. the QR eigenvalue algorithm)
-#  KM-- Monomial basis dictionary in which K is expressed.  
+#  L-- Monomials of polynomial system
 #  ish- the "is_homogeneous" boolian.
 # OUTPUT:
 # a list of matrices whose eigenvalues are the solution coordinates.
@@ -155,6 +155,7 @@ function mult_matrix(B, X, K, L, ish = false)
         for (m,i) in Idx.terms
             k = get(KM, m, 0)
             if k != 0
+                #M[i,:] = K[k,:]
                 for j in 1:size(K,2)
                     M[i,j] = K[k,j]
                 end
