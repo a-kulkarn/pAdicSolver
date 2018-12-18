@@ -8,6 +8,8 @@ function is_not_homogeneous(p)
     maximum(L) != minimum(L)
 end
 
+
+# Creates the macaulay matrix of the polynomial system P.
 function macaulay_mat(P, L::AbstractVector, X, ish = false )
     d = maximum([degree(m) for m in L])
     if ish
@@ -28,10 +30,13 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
     matrix(M,idx(L))
 end
 
+
+# Given the nullspace of an operator N,
+# compute a QR basis B 
 function qr_basis(N, L, ish = false)
     Idx= idx(L)
     if ish
-        L0 = filter(m->(m.z[1]>0), L)
+        L0 = filter(m->(m.z[1]>0), L) # NOTE: m.z is the vector of exponents of the monomial.
     else
         d  = maximum([degree(m) for m in L])
         L0 = filter(m->degree(m)<d,L)
@@ -62,17 +67,22 @@ function qr_basis(N, L, ish = false)
     B, N*F.Q
 end
 
+
 # AVI: Main solver function, for us anyways.
 # calls to:
 # macaulay_mat
-# nullspace
 # qr_basis
 # mult_matrix
 # eigdiag
 #------------
-# call to the qr intrinsic likely uses float (not p-adic) arithmetic.
+# call to the qr intrinsic uses float (not p-adic) arithmetic.
 #-------------------
-solve_macaulay = function(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1 )
+# INPUTS:
+# P   -- polynomial system
+# X   -- variables in the polynomial system
+# rho -- monomial degree of the system. Default is the macaulay degree.
+#
+function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1 )
     println()
     println("-- Degrees ", map(p->degree(p),P))
     ish = !any(is_not_homogeneous, P)

@@ -14,8 +14,8 @@ module AlgebraicSolvers
   include("mindex.jl")
   include("matrix.jl")
   include("macaulay.jl")
-  include("newton.jl")
-  include("toric.jl")
+  #include("newton.jl")
+  #include("toric.jl")
 
 
 

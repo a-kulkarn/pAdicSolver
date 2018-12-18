@@ -3,6 +3,7 @@ export matrix, smatrix, mult_basis, mult_matrix, eigdiag, kernel, rel_error
 import LinearAlgebra: nullspace
 using SparseArrays
 
+#=
 function kernel(A::Matrix)
     U,S,V = svd(A)
     r=1;
@@ -104,10 +105,47 @@ function mult_basis(N, L::Vector{T}, X) where T
     B
 end
 
+=#
+
 ##################################################################
 ## AVI: this looks like the part we care about.
+## macaulay_solve runs, though it looks like excluding the other
+## things will kill the toric functionality.
 
+# AVI:
+# Takes a list of polynomials and a basis of monomials and
+# returns a matrix of coefficients corresponding to the
+# monomial basis.
+#
+# AVI: Multivariate polynomials has a "coefficients" function.
+# Should simplify this function a bit.
+#
+# AVI: The t.\alpha is the coefficient of the term.
+#
+function matrix(P::Vector, M::MonomialIdx)
+    A = fill(zero(coeftype(P[1])), length(P), length(M))
+    j = 1
+    for p in P
+        for t in p
+            i = get(M, t.x, 0)
+            if i != 0
+                A[j,i] = t.α
+            end
+        end
+        j+=1
+    end
+    A
+end
 
+# AVI:
+# INPUTS:
+#  B -- basis for QR factorization
+#  X -- variables for the polynomial ring
+#  K -- ????
+#  KM-- ????
+#  ish- the "is_homogeneous" boolian.
+# OUTPUT:
+# ????
 function mult_matrix(B, X, K, KM, ish = false)
     R = []
     Idx = idx(B)
@@ -138,6 +176,7 @@ function mult_matrix(B, X, K, KM, ish = false)
     R
 end
 
+## 
 function eigdiag(M)
     M0 = sum(M[i]*rand() for i in 1:length(M))
     #t0=time()
@@ -180,7 +219,7 @@ end
 
 ##################################################################
 
-
+#=
 """
 Vector of relative errors of P at the points X
 """
@@ -200,3 +239,4 @@ function rel_error(p, Xi::Matrix, X = variables(p))
     end
     r
 end
+=#
