@@ -51,7 +51,7 @@ function qr_basis(N, L, ish = false)
     end
 
     # F= qrfact(N0, Val(true))
-    F = qr(N0,Val(true))
+    F = qr(N0,Val(true)) ## IMPORTANT: The qr call is automatically over R.
     B = []
     if ish
         for i in 1:size(N,2)

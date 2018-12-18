@@ -170,7 +170,7 @@ end
 ## PREC: The eigvecs function probably needs a p-adic version.
 ## also, rand() as well.
 function eigdiag(M)
-    M0 = sum(M[i]*rand() for i in 1:length(M))
+    M0 = sum(A*rand() for A in M)
     #t0=time()
     I0 = inv(M0)
     #println("... inv   ", time()-t0, "(s)"); t0=time()
