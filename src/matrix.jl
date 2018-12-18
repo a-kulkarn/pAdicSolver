@@ -150,27 +150,26 @@ function mult_matrix(B, X, K, L, ish = false)
     KM = idx(L)
     R = []
     Idx = idx(B)
-    if !ish
-        M = fill(0.0, length(B), size(K,2) )
-        for (m,i) in Idx.terms
-            k = get(KM, m, 0)
-            if k != 0
-                #M[i,:] = K[k,:]
-                for j in 1:size(K,2)
-                    M[i,j] = K[k,j]
-                end
-            end
-        end
-        push!(R,M)
-    end
-    for v in X
+
+    #if !ish
+    #    M = fill(0.0, length(B), size(K,2) )
+    #    for (m,i) in Idx.terms
+    #        k = get(KM, m, 0)
+    #         if k != 0
+    #             M[i,:] = K[k,:]
+    #         end
+    #     end
+    #     push!(R,M)
+    # end
+
+    if !ish Y = vcat([DynamicPolynomials.Monomial{true}(1)],X) else Y = X end
+    
+    for v in Y
         M = fill(0.0, length(B), size(K,2) )
         for (m,i) in Idx.terms
             k = get(KM, m*v, 0)
             if k != 0
-                for j in 1:size(K,2)
-                    M[i,j] = K[k,j]
-                end
+                M[i,:] = K[k,:]
             end
         end
         push!(R,M)
