@@ -141,7 +141,7 @@ end
 # INPUTS:
 #  B -- basis for QR factorization
 #  X -- variables for the polynomial ring
-#  K -- ????  (probably the R in the QR)
+#  K -- ????  (K = RQ I think, c.f. the QR eigenvalue algorithm)
 #  KM-- Monomial basis in which K is expressed.  
 #  ish- the "is_homogeneous" boolian.
 # OUTPUT:

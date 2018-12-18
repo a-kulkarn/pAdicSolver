@@ -1,5 +1,5 @@
-using AlgebraicSolvers
-using LinearAlgebra
+#using AlgebraicSolvers
+#using LinearAlgebra
 
 X = @Ring x0 x1 x2
 n = length(X)-1

@@ -33,7 +33,7 @@ end
 
 # Given the nullspace of an operator N,
 # compute a QR basis B
-# also return N*Q. There is likely some trickery here... (this is probably R?)
+# also return N*Q. Probably a numerical trick for computing the eigenvalues.
 function qr_basis(N, L, ish = false)
     Idx= idx(L)
     if ish
