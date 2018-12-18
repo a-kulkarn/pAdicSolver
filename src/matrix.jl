@@ -150,6 +150,7 @@ function mult_matrix(B, X, K, L, ish = false)
     KM = idx(L)
     Idx = idx(B)
 
+    # For an affine system, '1' is needed as a monomial as well.
     if !ish Y = vcat([DynamicPolynomials.Monomial{true}(1)],X) else Y = X end
 
     function construct_monomial_mult_matrix(v)
