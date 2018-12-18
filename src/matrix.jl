@@ -167,7 +167,7 @@ function mult_matrix(B, X, K, L, ish = false)
     return [construct_monomial_mult_matrix(v) for v in Y]
 end
 
-## 
+## PREC: The eigvecs function probably needs a p-adic version.
 function eigdiag(M)
     M0 = sum(M[i]*rand() for i in 1:length(M))
     #t0=time()
@@ -213,7 +213,8 @@ end
 ##################################################################
 
 # AVI: Function used for testing (over C). Not a dependency of core
-# methods.
+# methods. Very useful for checking to make sure I didn't destroy
+# the code.
 
 """
 Vector of relative errors of P at the points X
