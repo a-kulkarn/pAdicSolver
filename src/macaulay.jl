@@ -31,9 +31,25 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
 end
 
 
-# Given the nullspace of an operator N,
+# Given the nullspace N of a macaulary operator
 # compute a QR basis B
-# also return N*Q. Probably a numerical trick for computing the eigenvalues.
+# also return N0*Q. 
+#
+# AVI: Temp notes
+# STEPS:
+# 1:     choose a subset of the monoial basis L0
+# 2:     Extract a submatrix N0 of size #L0 x #cols(N) corresponding to the monomial subset.
+#        (Note: the transpose is constructed.)
+# 3:     Compute the QR factorization of N0, with pivoting
+# 4:     !!! Use the pivots to choose the basis B of monomials corresponding to columns 
+#            in the QR factorization that give a well-conditioned square submatrix      !!!
+# 5:     return B and N*Q (NQ contains R as a submatrix).
+
+# Scratch calculations
+# N0 ssq N^T
+# N0 = QR
+# NQ = [N0^T |N1]*Q = [R | N1*Q]
+
 function qr_basis(N, L, ish = false)
     Idx= idx(L)
     if ish

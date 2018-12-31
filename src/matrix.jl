@@ -141,8 +141,8 @@ end
 # INPUTS:
 #  B -- basis for QR factorization
 #  X -- variables for the polynomial ring
-#  K -- ????  (K = RQ I think, c.f. the QR eigenvalue algorithm)
-#  L-- Monomials of polynomial system
+#  K -- the "R" from the QR factorization. More precisely, the transpose of R is a submatrix of K.
+#  L -- Monomials of polynomial system
 #  ish- the "is_homogeneous" boolian.
 # OUTPUT:
 # a list of matrices whose eigenvalues are the solution coordinates.
