@@ -127,6 +127,8 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
 
     Xi = eigdiag(M)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
+
+    # This should not be at top-level. Fix needed.
     if (!ish)
         for i in 1:size(Xi,1) Xi[i,:]/=Xi[i,1] end
         Xi = Xi[:,2:size(Xi,2)]
