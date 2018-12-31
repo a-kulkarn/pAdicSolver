@@ -169,6 +169,13 @@ end
 
 ## PREC: The eigvecs function probably needs a p-adic version.
 ## also, rand() as well.
+
+# AVI:
+# Function to compute the eigenvalues of a list of (commuting) matrices, in the
+# specific case that the matrices are mult-by-coordinate-variable operators on R/I
+#
+# INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
+# Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 function eigdiag(M)
     M0 = sum(A*rand() for A in M)
     #t0=time()
