@@ -1,4 +1,4 @@
-export matrix, smatrix, mult_basis, mult_matrix, eigdiag, kernel, rel_error
+export matrix, smatrix, mult_basis, mult_matrix, eigdiag, padic_eigdiag, kernel, rel_error
 
 import LinearAlgebra: nullspace
 #using SparseArrays
@@ -205,12 +205,6 @@ function eigdiag(M)
     X
 end
 
-import Base.rand
-function rand(Qp::FlintPadicField)
-    p = Qp.p
-    N = Qp.prec_max
-    return Qp(rand(1:p^N))
-end
 
 # AVI:
 # Function to compute the eigenvalues of a list of (commuting) matrices, in the
@@ -221,7 +215,7 @@ end
 function padic_eigdiag(M)
 
     Qp = base_ring(M[1])
-    M0 = sum(A*rand(Qp) for A in M)
+    M0 = sum(A*rand(Qp) for A in M) # non-integral random causes problems
 
     I0 = inv(M0)
     Mg = I0*M[1]
@@ -229,17 +223,15 @@ function padic_eigdiag(M)
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     E  = eigvecs(Mg) 
 
-    Z  = E\I0 #REMINDER: extend the solve function to work in the rectangular case.
-
-    X = matrix( zero(Qp), fill(zero(Qp), size(M0,1),length(M)))
+    X = matrix( Qp, fill(zero(Qp), size(E,2),length(M)))
     for j in 1:length(M)
-        Yj = Z*M[j]*E
+        Yj = rectangular_solve(E, I0*M[j]*E)
         # D = Y\Yj
-        for i in 1:size(M0,1)
+        for i in 1:size(E,2)
             X[i,j]= Yj[i,i] #(Y[:,i]\Yj[:,i])[1] #D[i,i]
         end
     end
-    X
+    return X
 end
 
 
