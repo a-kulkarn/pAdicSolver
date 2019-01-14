@@ -107,6 +107,7 @@ end
 
 =#
 
+
 ##################################################################
 ## AVI: this looks like the part we care about.
 ## macaulay_solve runs, though it looks like excluding the other
@@ -203,6 +204,44 @@ function eigdiag(M)
     end
     X
 end
+
+import Base.rand
+function rand(Qp::FlintPadicField)
+    p = Qp.p
+    N = Qp.prec_max
+    return Qp(rand(1:p^N))
+end
+
+# AVI:
+# Function to compute the eigenvalues of a list of (commuting) matrices, in the
+# specific case that the matrices are mult-by-coordinate-variable operators on R/I
+#
+# INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
+# Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
+function padic_eigdiag(M)
+
+    Qp = base_ring(M[1])
+    M0 = sum(A*rand(Qp) for A in M)
+
+    I0 = inv(M0)
+    Mg = I0*M[1]
+
+    # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
+    E  = eigvecs(Mg) 
+
+    Z  = E\I0 #REMINDER: extend the solve function to work in the rectangular case.
+
+    X = matrix( zero(Qp), fill(zero(Qp), size(M0,1),length(M)))
+    for j in 1:length(M)
+        Yj = Z*M[j]*E
+        # D = Y\Yj
+        for i in 1:size(M0,1)
+            X[i,j]= Yj[i,i] #(Y[:,i]\Yj[:,i])[1] #D[i,i]
+        end
+    end
+    X
+end
+
 
 ## Looks like a function for evaluating a polynomial at a vector?
 ## WARNING: It allows you to evaluate at a vector that is too long...

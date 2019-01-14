@@ -1,0 +1,9 @@
+
+Why isn't the parent-element relation structure encoded by the parametric type system?
+
+Qp = PadicField(7,20)
+a = Qp(1)
+typeof(a)
+
+>>
+padic{Qp}
