@@ -31,60 +31,6 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
 end
 
 
-# Given the nullspace N of a macaulary operator
-# compute a QR basis B
-# also return N0*Q. 
-#
-# AVI: Temp notes
-# STEPS:
-# 1:     choose a subset of the monoial basis L0
-# 2:     Extract a submatrix N0 of size #L0 x #cols(N) corresponding to the monomial subset.
-#        (Note: the transpose is constructed.)
-# 3:     Compute the QR factorization of N0, with pivoting
-# 4:     !!! Use the pivots to choose the basis B of monomials corresponding to columns 
-#            in the QR factorization that give a well-conditioned square submatrix      !!!
-# 5:     return B and N*Q (NQ contains R as a submatrix).
-
-# Scratch calculations
-# N0 ssq N^T
-# N0 = QR
-# NQ = [N0^T |N1]*Q = [R | N1*Q]
-
-function qr_basis(N, L, ish = false)
-    Idx= idx(L)
-    if ish
-        L0 = filter(m->(m.z[1]>0), L) # NOTE: m.z is the vector of exponents of the monomial.
-    else
-        d  = maximum([degree(m) for m in L])
-        L0 = filter(m->degree(m)<d,L)
-    end
-    
-    N0 = fill(zero(N[1,1]), size(N,2),length(L0))
-    for i in 1:length(L0)
-        for j in 1:size(N,2)
-            N0[j,i]= N[get(Idx,L0[i],0),j]
-        end
-    end
-
-    # F= qrfact(N0, Val(true))
-    F = qr(N0,Val(true)) ## IMPORTANT: The qr call is automatically over R.
-    B = []
-    if ish
-        for i in 1:size(N,2)
-            m = copy(L0[F.p[i]])
-            m.z[1]-=1
-            push!(B, m)
-            # should test if the diag. coeff. is not small
-        end
-    else
-        for i in 1:size(N,2)
-            push!(B, L0[F.p[i]])
-        # should test if the diag. coeff. is not small
-        end
-    end
-    B, N*F.Q
-end
-
 
 # AVI: Main solver function, for us anyways.
 # calls to:
