@@ -251,35 +251,6 @@ function normalize_solution!(Xi, ish)
 end
 
 
-# AVI:
-# Function to compute the eigenvalues of a list of (commuting) matrices, in the
-# specific case that the matrices are mult-by-coordinate-variable operators on R/I
-#
-# INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
-# Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
-function padic_eigdiag(M)
-
-    Qp = base_ring(M[1])
-    M0 = sum(A*rand(Qp) for A in M) # non-unit random causes problems
-
-    I0 = inv(M0)
-    Mg = I0*M[1]
-
-    # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-    E  = eigvecs(Mg) 
-
-    X = matrix( Qp, fill(zero(Qp), size(E,2),length(M)))
-    for j in 1:length(M)
-        Yj = rectangular_solve(E, I0*M[j]*E)
-
-        for i in 1:size(E,2)
-            X[i,j]= Yj[i,i]
-        end
-    end
-    return X
-end
-
-
 ## Looks like a function for evaluating a polynomial at a vector?
 ## WARNING: It allows you to evaluate at a vector that is too long...
 function (p::Polynomial{B,T})(x::Vector) where {B,T}
