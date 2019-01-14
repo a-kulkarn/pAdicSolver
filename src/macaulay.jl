@@ -56,30 +56,53 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     else
         L = [m for m in monomials(X, 0:rho)]
     end
+    # We also specifically designate the "monomial" of x0 in the computations.
+    # in the affine case, the monomial x0 is just "1", in which case we mean take the
+    # monomials whose degrees are not maximal.
+    #
+    # The KEY property of this monomial basis L0 is that for any element b, xi*b remains inside the
+    # larger monomial basis L. That is,
+    #                                         X ⋅ L0 ⊂ L
+    Idx = idx(L)
+    L0 = monomials_divisible_by_x0(L, ish)
+    IdL0 = [get(Idx, m,0) for m in L0]
+    
+    # START MAIN SOLVER
     t0 = time()
     println("-- Monomials ", length(L), " degree ", rho,"   ",time()-t0, "(s)"); t0 = time()
 
     R = macaulay_mat(P, L, X, ish)
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
-
+    
+    #<dispatch this>    
     N = nullspace(R)
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
 
-    B, Nr = qr_basis(N, L, ish)
+
+    # The idea of the QR step is two-fold:
+    # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning set (here, IdL0).
+    #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form a well-conditioned
+    #    submatrix.
+    #
+    # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of coordinates
+    #    is not important in the final step, when the eigenvalues are calulated.
+    #
+    F = qr( transpose(N[IdL0,:]) , Val(true))
+    Nr = N*F.Q
+    B = permute_and_divide_by_x0(L0, F, ish)
+    
     println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
 
-    M = mult_matrix(B, X, Nr, L, ish)
+    
+    M = mult_matrices(B, X, Nr, L, ish)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
 
-    Xi = eigdiag(M)
+    # <dispatch this>
+    Xi = normalized_simultaneous_eigenvalues(M,ish)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
 
-    # This should not be at top-level. Fix needed.
-    if (!ish)
-        for i in 1:size(Xi,1) Xi[i,:]/=Xi[i,1] end
-        Xi = Xi[:,2:size(Xi,2)]
-    else
-        for i in 1:size(Xi,1) Xi[i,:]/=norm(Xi[i,:]) end
-    end
-    Xi
+    # In the affine system, the distinguished monomial (i.e, "1" for that case) does not correspond
+    # to a coordinate.
+    if ish return Xi else return  Xi[:,2:size(Xi,2)] end
 end
+

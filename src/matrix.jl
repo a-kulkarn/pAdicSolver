@@ -138,60 +138,35 @@ function matrix(P::Vector, M::MonomialIdx)
     A
 end
 
-# Given the nullspace N of a macaulay operator
-# compute a QR basis B
-# also return N0*Q. 
-#
-# AVI: Temp notes
-# STEPS:
-# 1:     choose a subset of the monoial basis L0
-# 2:     Extract a submatrix N0 of size #L0 x #cols(N) corresponding to the monomial subset.
-#        (Note: the transpose is constructed.)
-# 3:     Compute the QR factorization of N0, with pivoting
-# 4:     !!! Use the pivots to choose the basis B of monomials corresponding to columns 
-#            in the QR factorization that give a well-conditioned square submatrix      !!!
-# 5:     return B and N*Q (NQ contains R as a submatrix).
-
-# Scratch calculations
-# N0 ssq N^T
-# N0 = QR
-# NQ = [N0^T |N1]*Q = [R | N1*Q]
-
-function qr_basis(N, L, ish = false)
-    Idx= idx(L)
+# Figure out what L0 should be
+function monomials_divisible_by_x0(L,ish)
     if ish
-        L0 = filter(m->(m.z[1]>0), L) # NOTE: m.z is the vector of exponents of the monomial.
+        return filter(m->(m.z[1]>0), L) # NOTE: m.z is the vector of exponents of the monomial.
     else
         d  = maximum([degree(m) for m in L])
-        L0 = filter(m->degree(m)<d,L)
+        return filter(m->degree(m)<d,L)
     end
-    
-    N0 = fill(zero(N[1,1]), size(N,2),length(L0))
-    for i in 1:length(L0)
-        for j in 1:size(N,2)
-            N0[j,i]= N[get(Idx,L0[i],0),j]
-        end
-    end
+end
 
-    # F= qrfact(N0, Val(true))
-    F = qr(N0,Val(true)) ## IMPORTANT: The qr call is automatically over R.
+function permute_and_divide_by_x0(L0,F,ish)
     B = []
+    m = size(F.Q,1)
     if ish
-        for i in 1:size(N,2)
+        for i in 1:m
             m = copy(L0[F.p[i]])
             m.z[1]-=1
             push!(B, m)
             # should test if the diag. coeff. is not small
         end
     else
-        for i in 1:size(N,2)
+        for i in 1:m
             push!(B, L0[F.p[i]])
             # should test if the diag. coeff. is not small
         end
     end
-    B, N*F.Q
+    return B
 end
-
+    
 
 # AVI:
 # INPUTS:
@@ -202,7 +177,8 @@ end
 #  ish- the "is_homogeneous" boolian.
 # OUTPUT:
 # a list of matrices whose eigenvalues are the solution coordinates.
-function mult_matrix(B, X, K, L, ish = false)
+# The matrices represent multiplication-by-xi maps  ** in Q-coordinates **
+function mult_matrices(B, X, K, L, ish = false)
     KM = idx(L)
     Idx = idx(B)
 
@@ -215,6 +191,8 @@ function mult_matrix(B, X, K, L, ish = false)
             k = get(KM, m*v, 0)
             if k != 0
                 M[i,:] = K[k,:]
+            else
+                println(k,m,v) # this never appears to happen
             end
         end
         return M
@@ -223,16 +201,18 @@ function mult_matrix(B, X, K, L, ish = false)
     return [construct_monomial_mult_matrix(v) for v in Y]
 end
 
-## PREC: The eigvecs function probably needs a p-adic version.
-## also, rand() as well.
 
 # AVI:
-# Function to compute the eigenvalues of a list of (commuting) matrices, in the
-# specific case that the matrices are mult-by-coordinate-variable operators on R/I
+# Function to compute the eigenvalues of a list of (commuting) matrices, normalized
+# by the eigenvalues of the first matrix.
 #
 # INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
-# Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
-function eigdiag(M)
+# Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M,
+#          normalized by eigenvalues of the first matrix.
+#          NOTE: The first matrix always represents multiplication-by-"1" or multiplication-by-x0.
+#          for the reason of precision, we choose different normalizations in the affine or
+#          projective cases.
+function normalized_simultaneous_eigenvalues(M :: Array{Array{T,2},1} where T <: Number, ish::Bool)
     M0 = sum(A*rand() for A in M)
     #t0=time()
     I0 = inv(M0)
@@ -257,7 +237,17 @@ function eigdiag(M)
             X[i,j]= Yj[i,i] #(Y[:,i]\Yj[:,i])[1] #D[i,i]
         end
     end
-    X
+    return normalize_solution!(X, ish)
+end
+
+function normalize_solution!(Xi, ish)
+    Sol = Xi
+    if (!ish)
+        for i in 1:size(Sol,1) Sol[i,:]/=Sol[i,1] end
+    else
+        for i in 1:size(Sol,1) Sol[i,:]/=norm(Sol[i,:]) end
+    end
+    return Sol
 end
 
 
@@ -281,9 +271,9 @@ function padic_eigdiag(M)
     X = matrix( Qp, fill(zero(Qp), size(E,2),length(M)))
     for j in 1:length(M)
         Yj = rectangular_solve(E, I0*M[j]*E)
-        # D = Y\Yj
+
         for i in 1:size(E,2)
-            X[i,j]= Yj[i,i] #(Y[:,i]\Yj[:,i])[1] #D[i,i]
+            X[i,j]= Yj[i,i]
         end
     end
     return X
