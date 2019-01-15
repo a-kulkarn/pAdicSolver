@@ -19,8 +19,9 @@ end
 # INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
 # Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 function normalized_simultaneous_eigenvalues(
-    M :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool)
+    inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool)
 
+    M = [ matrix(A) for A in inputM]
     Qp = base_ring(M[1])
     M0 = sum(A*rand(Qp) for A in M) # non-unit random causes problems
 
