@@ -2,7 +2,8 @@
 using Hecke
 
 # Somehow enforce this dependency.
-include("padic_util.jl")
+include("HeckeExt.jl")
+using HeckeExt
 
 ####################
 
