@@ -113,30 +113,21 @@ end
 ## macaulay_solve runs, though it looks like excluding the other
 ## things will kill the toric functionality.
 
-# AVI:
-# Takes a list of polynomials and a basis of monomials and
-# returns a matrix of coefficients corresponding to the
-# monomial basis.
-#
-# AVI: Multivariate polynomials has a "coefficients" function.
-# Should simplify this function a bit.
-#
-# AVI: The t.\alpha is the coefficient of the term.
-#
-function matrix(P::Vector, M::MonomialIdx)
-    A = fill(zero(coeftype(P[1])), length(P), length(M))
-    j = 1
-    for p in P
-        for t in p
-            i = get(M, t.x, 0)
-            if i != 0
-                A[j,i] = t.α
-            end
-        end
-        j+=1
-    end
-    A
-end
+
+# function matrix(P::Vector, M::MonomialIdx)
+#     A = fill(zero(coeftype(P[1])), length(P), length(M))
+#     j = 1
+#     for p in P
+#         for t in p
+#             i = get(M, t.x, 0)
+#             if i != 0
+#                 A[j,i] = t.α
+#             end
+#         end
+#         j+=1
+#     end
+#     A
+# end
 
 # Figure out what L0 should be
 function monomials_divisible_by_x0(L,ish)
@@ -167,6 +158,7 @@ function permute_and_divide_by_x0(L0,F,ish)
     return B
 end
     
+
 
 # AVI:
 # INPUTS:
@@ -237,17 +229,18 @@ function normalized_simultaneous_eigenvalues(M :: Array{Array{T,2},1} where T <:
             X[i,j]= Yj[i,i] #(Y[:,i]\Yj[:,i])[1] #D[i,i]
         end
     end
-    return normalize_solution!(X, ish)
-end
 
-function normalize_solution!(Xi, ish)
-    Sol = Xi
-    if (!ish)
-        for i in 1:size(Sol,1) Sol[i,:]/=Sol[i,1] end
-    else
-        for i in 1:size(Sol,1) Sol[i,:]/=norm(Sol[i,:]) end
+    function normalize_solution!(Xi, ish)
+        Sol = Xi
+        if (!ish)
+            for i in 1:size(Sol,1) Sol[i,:]/=Sol[i,1] end
+        else
+            for i in 1:size(Sol,1) Sol[i,:]/=norm(Sol[i,:]) end
+        end
+        return Sol
     end
-    return Sol
+
+    return normalize_solution!(X, ish)
 end
 
 

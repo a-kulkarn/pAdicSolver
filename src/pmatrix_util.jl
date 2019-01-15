@@ -1,16 +1,28 @@
 
-using Hecke
 
-# Somehow enforce this dependency.
-include("HeckeExt.jl")
-using HeckeExt
+## Dispatcher for nullspace
+function nullspace(A::Array{padic,2})
+    M = matrix(A)
+    return Hecke.nullspace(M)[2].entries
+end
 
-####################
+struct QRPadicArrayPivoted
+    Q::Array{padic,2}
+    R::Array{padic,2}
+    p::Array{Int64,1}
+end
+
 
 # dispatch to the p-adic qr utilities
+import LinearAlgebra.qr
 function qr(A :: Array{padic,2}, pivot=Val(true))
-    return padic_qr(matrix(A))
+    F = padic_qr(matrix(A))
+    return QRPadicArrayPivoted(F.Q.entries, F.R.entries, F.p)
 end
+
+# modify the norm function to make sense
+import LinearAlgebra.norm
+norm(A :: Array{padic,1}) = maximum( abs.(A))
 
 
 # AVI:
@@ -40,5 +52,16 @@ function normalized_simultaneous_eigenvalues(
             X[i,j]= Yj[i,i]
         end
     end
-    return normalize_solution!(X)
+
+    function normalize_solution!(Xi, ish)
+        Sol = Xi
+        if (!ish)
+            for i in 1:size(Sol,1) Sol[i,:]//=Sol[i,1] end
+        #else
+            # do nothing otherwise, for now.
+        end
+        return Sol
+    end
+    
+    return normalize_solution!(X, ish)
 end

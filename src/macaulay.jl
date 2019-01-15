@@ -1,4 +1,4 @@
-export macaulay_mat, qr_basis, solve_macaulay
+export macaulay_mat, qr_basis, solve_macaulay, coefficient_matrix
 
 using LinearAlgebra
 using DynamicPolynomials
@@ -25,9 +25,24 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
             push!(M,P[i]*m)
         end
     end
-    ###
-    
-    matrix(M,idx(L))
+    ###    
+    coefficient_matrix(M, L)
+end
+
+# AVI:
+# Takes a list of polynomials and a basis of monomials and
+# returns a matrix of coefficients corresponding to the
+# monomial basis.
+#
+# AVI: Multivariate polynomials has a "coefficients" function.
+# Should simplify this function a bit.
+#
+# AVI: The t.\alpha is the coefficient of the term.
+#
+# L -- list of monomials
+import MultivariatePolynomials.coefficients
+function coefficient_matrix(P::Vector, L)
+    return Array(transpose(hcat([MultivariatePolynomials.coefficients(p, L) for p in P]...)))
 end
 
 
@@ -87,7 +102,7 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of coordinates
     #    is not important in the final step, when the eigenvalues are calulated.
     #
-    F = qr( transpose(N[IdL0,:]) , Val(true))
+    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
     Nr = N*F.Q
     B = permute_and_divide_by_x0(L0, F, ish)
     
@@ -96,6 +111,8 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     
     M = mult_matrices(B, X, Nr, L, ish)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
+
+    println(M)
 
     Xi = normalized_simultaneous_eigenvalues(M,ish)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()

@@ -1,7 +1,15 @@
+
+# Somehow enforce this dependency.
+include("HeckeExt.jl")
+
+####################
+
 module AlgebraicSolvers
 
   using MultivariatePolynomials
   using DynamicPolynomials
+  using Hecke
+  using Main.HeckeExt
 
   degree = DynamicPolynomials.maxdegree
 
@@ -13,6 +21,7 @@ module AlgebraicSolvers
 
   include("mindex.jl")
   include("matrix.jl")
+  include("pmatrix_util.jl")
   include("macaulay.jl")
   #include("newton.jl")
   #include("toric.jl")

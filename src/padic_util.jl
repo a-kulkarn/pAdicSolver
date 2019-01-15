@@ -9,13 +9,12 @@ using Hecke
 #                                                                                            #
 ##############################################################################################
 
-import Base./
-import Base.abs
+import Base: /, +, abs 
 import Hecke.valuation
 
-function /(x::padic,y::padic)
-    return x//y
-end
+function +(x::padic) return x end
+function /(x::padic,y::padic) return x//y end
+
 
 # Potential fix for the bug with the valuation function
 # Note: there may be issues if Hecke depends on the
@@ -67,11 +66,18 @@ end
 # It turns out that the algorithm to do this is just the LU factorization
 # with pivoting.
 
+struct QRPadicPivoted
+    Q::Hecke.Generic.MatElem{padic}
+    R::Hecke.Generic.MatElem{padic}
+    p::Array{Int64,1}
+end
+
 function padic_qr(A::Hecke.Generic.MatElem{padic})
-    n = size(A,1);
-    L= identity_matrix(A.base_ring,n);
-    U=deepcopy(A);
-    P=identity_matrix(A.base_ring,n);
+    n = size(A,1)
+    L= identity_matrix(A.base_ring,n)
+    U= deepcopy(A)
+    P= Array(1:n)
+    #identity_matrix(A.base_ring,n)
     
     for k=1:n
         norm_list = abs.((U.entries)[k:n,k])
@@ -83,10 +89,11 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
             temp=U[k,:];
             U[k,:]=U[m,:];
             U[m,:]=temp;
+            
             # interchange rows m and k in P
-            temp=P[k,:];
-            P[k,:]=P[m,:];
-            P[m,:]=temp;
+            temp=P[k];
+            P[k]=P[m];
+            P[m]=temp;
 
             #swap columns corresponding to the row operations already done
             if k >= 2
@@ -101,7 +108,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
             U[j,:]=U[j,:]-L[j,k]*U[k,:];
         end
     end
-    return L,U,P
+    return QRPadicPivoted(L,U,P)
 end
 
 
@@ -140,6 +147,8 @@ Compute the eigenvectors of a padic matrix iteratively.
 
 NOTE: I should write a corresponding eigen function.
 """
+
+import LinearAlgebra.eigvecs
 function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
 
     Qp = A.base_ring

@@ -34,6 +34,7 @@ function Base.collect(A::Hecke.Generic.Mat{T}, state=1) where T
 end
 
 function Hecke.matrix(A::Array{T,2} where T <: Hecke.Generic.Mat{S} where S)
+    @assert reduce(==, [parent(x) for x in A]) 
     return matrix(parent(A[1,1], A))
 end
                   
@@ -76,7 +77,7 @@ function eigen(A::Hecke.Generic.MatElem{T}) where T
     R,_ = PolynomialRing(A.base_ring)
     g = charpoly(R, A)
     rts = roots(g)
-    if isempty(rts) then
+    if isempty(rts)
         error("Not implemented if no roots of char. poly. over the finite field")
     end
     
@@ -90,6 +91,7 @@ function eigen(A::Hecke.Generic.MatElem{T}) where T
 end
 
 # See usual eigvecs
+import LinearAlgebra.eigvecs
 function eigvecs(A::Hecke.Generic.MatElem{T}) where T
     return eigen(A).vectors    
 end
@@ -109,6 +111,8 @@ function charpoly(A::Hecke.Generic.MatElem{T}) where T
     return charpoly(R, A)
 end
 
+
+# Needs to be more robust. Also applied to the situation A is square but not of rank 1.
 
 # a slightly generalized version of solve
 # WARNING: does not check if the top block is non-singular
