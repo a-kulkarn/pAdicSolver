@@ -1,4 +1,7 @@
-using Main.AlgebraicSolvers
+
+include("../src/AlgebraicSolvers.jl")
+AS = Main.AlgebraicSolvers
+
 using LinearAlgebra
 
 include("proj1.jl")

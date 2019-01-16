@@ -38,7 +38,7 @@ function normalized_simultaneous_eigenvalues(
     Qp = base_ring(M[1])
     M0 = sum(A*rand(Qp) for A in M) # non-unit random causes problems
 
-    I0 = inv(M0)
+    I0 = inv(M0)  # Matrix M0 is often singular.
     Mg = I0*M[1]
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
@@ -56,7 +56,7 @@ function normalized_simultaneous_eigenvalues(
     function normalize_solution!(Xi, ish)
         Sol = Xi
         if (!ish)
-            for i in 1:size(Sol,1) Sol[i,:]//=Sol[i,1] end
+            for i in 1:size(Sol,1) Sol[i,:] *= inv(Sol[i,1]) end
         #else
             # do nothing otherwise, for now.
         end

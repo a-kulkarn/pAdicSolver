@@ -102,8 +102,7 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of coordinates
     #    is not important in the final step, when the eigenvalues are calulated.
     #
-    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
-    Nr = N*F.Q
+    F, Nr = iwasawa_step(N, IdL0)
     B = permute_and_divide_by_x0(L0, F, ish)
     
     println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
@@ -112,7 +111,10 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     M = mult_matrices(B, X, Nr, L, ish)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
 
-    println(M)
+    if true
+        println("TESTING MODE: Computation incomplete. Returning partial result.")
+        return M, F, B, N, Nr
+    end
 
     Xi = normalized_simultaneous_eigenvalues(M,ish)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
@@ -122,3 +124,16 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     if ish return Xi else return  Xi[:,2:size(Xi,2)] end
 end
 
+
+# Dispatcher for doing the right iwasawa algorithm
+function iwasawa_step(N :: Array{T,2} where T <: Number, IdL0)
+    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
+    return F, N*F.Q
+end
+
+
+# Dispatcher for doing the right iwasawa algorithm
+function iwasawa_step(N :: Array{padic,2} , IdL0)
+    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
+    return F, N*inv(matrix(parent(N[1,1]), Array(transpose(F.Q)))).entries
+end

@@ -79,7 +79,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
     P= Array(1:n)
     #identity_matrix(A.base_ring,n)
     
-    for k=1:size(A,2)
+    for k=1:min(size(A,1),size(A,2))
         norm_list = abs.((U.entries)[k:n,k])
         maxn, m = findmax( norm_list );
         if iszero(maxn) continue end
@@ -117,6 +117,7 @@ end
 #
 # a slightly generalized version of solve
 # WARNING: does not check if the top block is non-singular
+# If A,b have different precisions, some strange things happen.
 function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
 
     m = rows(A)
@@ -147,6 +148,7 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
         for i in (n+1):m
             for j in 1:cols(b)
                 if !iszero(b[i, j])
+                    println(b)
                     error("The system is inconsistent.")
                 end
             end
@@ -207,7 +209,7 @@ function inverse_iteration!(A,shift,v)
 
     if iszero(det(B))
         println("Value `shift` is exact eigenvalue. Returning only first basis vector")
-        return nullspace(B)[:,1]
+        return nullspace(B)[2][:,1:1]
     end
     
     pow = inv(B)
