@@ -24,6 +24,15 @@ function Base.broadcast(f, A::Hecke.Generic.Mat{T} where T)
     return matrix( parent(f(A[1,1])), f.(A.entries))
 end
 
+function Base.getindex(A::Hecke.Generic.Mat{T} where T, koln::Colon, I::Array{Int64,1})
+    return matrix(A.base_ring, A.entries[koln,I])
+end
+
+function Base.getindex(A::Hecke.Generic.Mat{T} where T, I::Array{Int64,1}, koln::Colon)
+    return matrix(A.base_ring, A.entries[I,koln])
+end
+
+
 # In theory this works, but the matrix never ends up with the right shape.
 function Base.iterate(A::Hecke.Generic.Mat{T}, state=1) where T
     return iterate(A.entries, state)
@@ -113,7 +122,7 @@ end
 
 
 # Needs to be more robust. Also applied to the situation A is square but not of rank 1.
-
+#
 # a slightly generalized version of solve
 # WARNING: does not check if the top block is non-singular
 function rectangular_solve(M::Hecke.MatElem{T}, b::Hecke.MatElem{T}) where T

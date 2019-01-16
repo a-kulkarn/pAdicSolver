@@ -79,9 +79,11 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
     P= Array(1:n)
     #identity_matrix(A.base_ring,n)
     
-    for k=1:n
+    for k=1:size(A,2)
         norm_list = abs.((U.entries)[k:n,k])
-        _, m = findmax( norm_list );
+        maxn, m = findmax( norm_list );
+        if iszero(maxn) continue end
+            
         m=m+k-1;
         if m!=k
             # Note: we actually want inv(P), so we should compute differently
@@ -110,6 +112,82 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
     end
     return QRPadicPivoted(L,U,P)
 end
+
+# Needs to be more robust. Also applied to the situation A is square but not of rank 1.
+#
+# a slightly generalized version of solve
+# WARNING: does not check if the top block is non-singular
+function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+
+    m = rows(A)
+    n = cols(A)
+    if rows(b_input) != m
+        error("`A` and `b` must have the same number of rows.")
+    end
+    b = deepcopy(b_input)
+
+    if m < n
+        error("Underdetermined systems not yet supported.")
+    end
+
+    F = padic_qr(A)
+    b = b[F.p,:]
+
+    # forward substitution, all diag entries are scaled to 1
+    for i in 1:m
+        for j in 1:(i-1)
+            #scale = A[i, j]
+            #b.zip_row_op(i, j, lambda x, y: x - y * scale)
+            b[i,:] = b[i,:] - b[j,:]* F.Q[i,j]
+        end
+    end
+
+    # consistency check for overdetermined systems
+    if m > n
+        for i in (n+1):m
+            for j in 1:cols(b)
+                if !iszero(b[i, j])
+                    error("The system is inconsistent.")
+                end
+            end
+        end
+    end
+    b = b[1:n, :]   # truncate zero rows if consistent
+
+    # backward substitution
+    #for i in range(n - 1, -1, -1):  # original python
+
+    for i in n:-1:1
+        for j in (i+1):n
+            #scale = A[i, j]
+            #b.zip_row_op(i, j, lambda x, y: x - y * scale)
+            b[i,:] = b[i,:] - b[j,:]*F.R[i,j]
+        end
+        #scale = A[i, i]
+        #b.row_op(i, lambda x, _: x / scale)
+        b[i,:] *= inv(F.R[i,i])
+    end
+
+    return b
+end
+
+
+# function old_version_of_rectangular_solve() 
+#     if rows(M) < cols(M)
+#         error("Not implemented when rows(M) < cols(M)")
+#     end
+#     # Extract top nxn block
+#     A = M[1:cols(M),:]
+
+    
+#     x = solve(A,b[1:cols(M),:])
+    
+#     if iszero(M*x - b)
+#         return x
+#     else
+#         error("Linear system does not have a solution")
+#     end
+# end
 
 
 # Solve for an eigenvector using inverse iteration.
