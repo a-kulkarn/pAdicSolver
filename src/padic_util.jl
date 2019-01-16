@@ -165,7 +165,12 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
         end
         #scale = A[i, i]
         #b.row_op(i, lambda x, _: x / scale)
-        b[i,:] *= inv(F.R[i,i])
+
+        if !iszero(b[i,:]) && iszero(F.R[i,i])
+            error("The system is inconsistent.")
+        elseif !iszero(F.R[i,i])
+            b[i,:] *= inv(F.R[i,i])
+        end
     end
 
     return b
