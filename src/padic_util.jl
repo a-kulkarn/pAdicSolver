@@ -18,12 +18,13 @@ function /(x::padic,y::padic) return x//y end
 
 # Potential fix for the bug with the valuation function
 # Note: there may be issues if Hecke depends on the
-# valuation being integer type
+# valuation being non-infinite.
+#
 function valuation(x::padic)
     if iszero(x)
         return Inf
     end
-    return x.v
+    return Int64(x.v)
 end
 
 function abs(x::padic)
@@ -49,9 +50,40 @@ function rand(Qp::FlintPadicField)
 end
 
 function random_test_matrix(Qp)
-    return matrix(Qp, rand.(fill(1:7^20),4,4))
+    return matrix(Qp, rand.(fill(1:7^Qp.prec_max),4,4))
 end
 
+##############################################################################################
+#                                                                                            #
+#                          Polynomials over p-adic fields                                    #
+#                                                                                            #
+##############################################################################################
+
+# Getting coefficients of a flint polynomial is not intuitive.
+# Flint system crashes if coefficients are not integers.
+# Flint system crashes if leading coefficients are divisible by p.
+
+# Lift termwise to a polynomial over the Flintegers.
+import Hecke.lift
+function lift(f :: Hecke.Generic.Poly{padic})
+    R,_ = PolynomialRing(FlintZZ)
+    return R([lift(c) for c in f.coeffs])
+end
+
+# This function is...kind of a hack.
+# It is also very buggy since FLINT can only handle a specific case
+# (integer polynomial, non-vanishing leading coefficient mod p)
+function factor(f :: Hecke.Generic.Poly{padic})
+    QpX = f.parent
+    Qp = QpX.base_ring
+    N = Qp.prec_max
+    
+    f_int = lift(f)
+    H = factor_mod_pk_init(fint,Qp.p)
+    D = factor_mod_pk(H,N)
+
+    return Dict( QpX(lift(k))=>D[k] for k in keys(D))   
+end
 
 ##############################################################################################
 #                                                                                            #
@@ -86,7 +118,6 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
             
         m=m+k-1;
         if m!=k
-            # Note: we actually want inv(P), so we should compute differently
             # interchange rows m and k in U
             temp=U[k,:];
             U[k,:]=U[m,:];
@@ -106,18 +137,36 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
             end
         end
         for j=k+1:n
-            L[j,k]=U[j,k]*inv(U[k,k]);
+            # A totally unneccesary prec. loss can be avoided here.
+            # Conducting a division gives an exact result in one matrix, but reduces precision in
+            # the other. Instead, we attempt to avoid the operation unless it is well-conditioned.
+            #L[j,k]=U[j,k]*inv(U[k,k]);
+            #U[j,:]=U[j,:]-L[j,k]*U[k,:];
+
+            L[j,k]= _precision_stable_division(U[j,k], U[k,k])
             U[j,:]=U[j,:]-L[j,k]*U[k,:];
         end
     end
     return QRPadicPivoted(L,U,P)
 end
 
+# Assumes that |a| ≤ |b| ≠ 0. Computes a padic integer x such that |a - xb| ≤ p^N, where N is the ring precision.
+function _precision_stable_division(a::padic, b::padic)
+    Qp = parent(b)
+    #if iszero(b) error("DivideError: integer division error") end
+    if iszero(a) return zero(Qp) end
+    
+    x = Qp(a.u) * inv(Qp(b.u))
+    x.v = a.v - b.v
+    # x.N = something...
+    return x
+end
+
 # Needs to be more robust. Also applied to the situation A is square but not of rank 1.
 #
 # a slightly generalized version of solve
-# WARNING: does not check if the top block is non-singular
 # If A,b have different precisions, some strange things happen.
+# TODO: honestly, just call this solve.
 function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
 
     m = rows(A)
@@ -169,6 +218,9 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
         #b.row_op(i, lambda x, _: x / scale)
 
         if !iszero(b[i,:]) && iszero(F.R[i,i])
+            println(b)
+            println()
+            println(F.R)
             error("The system is inconsistent.")
         elseif !iszero(F.R[i,i])
             b[i,:] *= inv(F.R[i,i])
@@ -179,37 +231,19 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
 end
 
 
-# function old_version_of_rectangular_solve() 
-#     if rows(M) < cols(M)
-#         error("Not implemented when rows(M) < cols(M)")
-#     end
-#     # Extract top nxn block
-#     A = M[1:cols(M),:]
-
-    
-#     x = solve(A,b[1:cols(M),:])
-    
-#     if iszero(M*x - b)
-#         return x
-#     else
-#         error("Linear system does not have a solution")
-#     end
-# end
-
-
 # Solve for an eigenvector using inverse iteration.
 # Note that the algorithm will not converge to a particular vector in general, but the norm of
 #
 # A*w - λ*w converges to zero. Here, λ is the unique eigenvalue closest to `shift`, (if it is unique).
 #
-# I should really optimize and stabilize this later
+# TODO: I should really optimize and stabilize this later
 function inverse_iteration!(A,shift,v)
     In = identity_matrix(A.base_ring, size(A,1))
     B = A - shift*In
 
     if iszero(det(B))
-        println("Value `shift` is exact eigenvalue. Returning only first basis vector")
-        return nullspace(B)[2][:,1:1]
+        println("Value `shift` is exact eigenvalue.")
+        return nullspace(B)[2]
     end
     
     pow = inv(B)
@@ -233,20 +267,65 @@ Compute the eigenvectors of a padic matrix iteratively.
 NOTE: I should write a corresponding eigen function.
 """
 
+function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
+    
+    if size(A)[1] != size(A)[2]
+        error("Input matrix must be square.")
+    end
+    
+    Qp = A.base_ring
+    
+    # First, make everything in A a p-adic integer
+    vals_of_A = valuation.( A.entries )
+    min_val = minimum(vals_of_A)
+
+    if min_val==Inf
+        # In this case, A is the zero matrix.
+        return identity_matrix(Qp, size(A)[1])
+    end
+
+    scale_factor = Qp.p^Int64(min_val)
+    Aint = scale_factor * A
+    
+    # Solve the problem modulo p
+    Amp = broadcast(modp, Aint)
+    E = eigspaces(Amp)
+
+
+    return [inverse_iteration(A, Qp(lift( E.values[i] )), matrix(Qp, lift(E.spaces[i])))
+            for i in 1:length(E.values)]
+end
+
+
+
 import LinearAlgebra.eigvecs
 function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
 
+    if size(A)[1] != size(A)[2]
+        error("Input matrix must be square.")
+    end
+    
     Qp = A.base_ring
+    
     # First, make everything in A a p-adic integer
-    println("Skipping an important step because lazy...")
+    vals_of_A = valuation.( A.entries )
+    min_val = minimum(vals_of_A)
 
+    if min_val==Inf
+        # In this case, A is the zero matrix.
+        return identity_matrix(Qp, size(A)[1])
+    end
+
+    scale_factor = Qp.p^Int64(min_val)
+    Aint = scale_factor * A
+    
     # Solve the problem modulo p
-    Amp = broadcast(modp, A)
+    Amp = broadcast(modp, Aint)
     E = eigen(Amp)
     eig_pairs = [ (E.values[i], E.vectors[:,i]) for i in 1:size(E.values)[1]]
     
     println("Assuming that the roots of the characteristic polynomial modulo p are all distinct")
-   
+
     return  hcat([ inverse_iteration(A, Qp(lift(e)), matrix(Qp,lift(v))) for (e,v) in eig_pairs]...)
 end
 
@@ -269,7 +348,12 @@ function iseigenvector(A,v)
         return false
     end
     e = (A*v)[i,1]/v[i,1]
-    return iszero(A*v - (A*v)[i,1]/v[i,1]*v),e
+
+    if iszero(A*v - (A*v)[i,1]/v[i,1]*v)
+        return true,e
+    else
+        return false
+    end
 end
 
 

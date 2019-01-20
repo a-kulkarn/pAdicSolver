@@ -42,7 +42,7 @@ function Base.collect(A::Hecke.Generic.Mat{T}, state=1) where T
     return A.entries
 end
 
-function Hecke.matrix(A::Array{T,2} where T <: Hecke.Generic.Mat{S} where S)
+function Hecke.matrix(A::Array{T,2} where T <: Hecke.NCRingElem)
     @assert reduce(==, [parent(x) for x in A]) 
     return matrix(parent(A[1,1], A))
 end
@@ -53,9 +53,15 @@ end
 #                                                                                            #
 ##############################################################################################
 
+# BUG:
+# nullspace(x::fmpz_mat) in Nemo at /Users/avinash/.julia/packages/Nemo/XNd31/src/flint/fmpz_mat.jl:889
+# Fails to compute nullspace for zero matrix.
 
 ## Make things a little more consistent with the other Julia types
-function my_nullspace(A::nmod_mat)
+function my_nullspace(A :: T) where T <: Union{nmod_mat, fmpz_mat}
+    if iszero(A)
+        return size(A,2), identity_matrix(A.base_ring, size(A,2))
+    end
     nu,N = nullspace(A)
     return nu, nu==0 ? matrix(A.base_ring, fill(0,size(A,2),0)) : N[:,1:nu]
 end
@@ -73,6 +79,26 @@ struct MyEigen{T}
     vectors::Hecke.Generic.MatElem{T}
 end
 
+struct EigenSpaceDec{T}
+    values::Array{T,1}
+    spaces::Array{S, 1} where S <: Hecke.Generic.MatElem{T}
+end
+
+# Computes the eigen spaces of a generic matrix, and returns a list of
+# matrices whose columns are generators for the eigen spaces.
+function eigspaces(A::Hecke.Generic.MatElem{T}) where T
+    R,_ = PolynomialRing(A.base_ring)
+    g = charpoly(R, A)
+    rts = roots(g)
+    if isempty(rts)
+        error("Not implemented if no roots of char. poly. over the finite field")
+    end
+    
+    Imat = identity_matrix(A.base_ring, size(A,1))
+
+    return EigenSpaceDec( rts, [ my_nullspace(A-r*Imat)[2] for r in rts])
+end
+    
 # Returns an eigen factorization structure like the default LinearAlgebra.eigen function.
 #
 # Fails when A mod p has no eigenvalues, because list has eltype Any
@@ -83,19 +109,10 @@ Computes the Eigenvalue decomposition of A. Requires factorization of polynomial
 over the base ring. 
 """
 function eigen(A::Hecke.Generic.MatElem{T}) where T
-    R,_ = PolynomialRing(A.base_ring)
-    g = charpoly(R, A)
-    rts = roots(g)
-    if isempty(rts)
-        error("Not implemented if no roots of char. poly. over the finite field")
-    end
+    E = eigspaces(A)
+    eig_vals = vcat([fill( E.values[i] , size(E.spaces[i],2) ) for i=1:size(E.values,1)]...)
+    eig_vecs = hcat(E.spaces...)
     
-    Imat = identity_matrix(A.base_ring, size(A,1))
-
-    eig_list = [ (r,my_nullspace(A-r*Imat)...) for r in rts]
-
-    eig_vals = vcat([fill( ep[1] , ep[2]) for ep in eig_list]...)
-    eig_vecs = hcat([ ep[3] for ep in eig_list]...)    
     return MyEigen(eig_vals, eig_vecs)
 end
 

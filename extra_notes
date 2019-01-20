@@ -1,9 +1,9 @@
 
-Why isn't the parent-element relation structure encoded by the parametric type system?
 
-Qp = PadicField(7,20)
-a = Qp(1)
-typeof(a)
 
->>
-padic{Qp}
+-- nullspace solvers in Hecke need to be replaces
+-- bug in Hecke nullspace over finite field
+-- bug in hensel_lift methods
+-- bug in valuation.
+-- need more flexible definitions for matrix type for convenience
+-- constant difference between NEMO matrices and HECKE matrices is frustrating.
