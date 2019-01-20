@@ -151,6 +151,8 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
 end
 
 # Assumes that |a| ≤ |b| ≠ 0. Computes a padic integer x such that |a - xb| ≤ p^N, where N is the ring precision.
+# TODO: investigate the precision.
+#
 function _precision_stable_division(a::padic, b::padic)
     Qp = parent(b)
     #if iszero(b) error("DivideError: integer division error") end
@@ -160,6 +162,73 @@ function _precision_stable_division(a::padic, b::padic)
     x.v = a.v - b.v
     # x.N = something...
     return x
+end
+
+# stable version of nullspace for padic matrices.
+function rank(A::Hecke.MatElem{padic})
+    n = rows(A)
+    m = cols(A)
+    F = padic_qr(A)
+
+    rank=0
+    for i=1:min(n,m)
+        if !iszero(F.R[i,i])
+            rank += 1
+        end
+    end
+    return rank
+end
+
+# stable version of nullspace for padic matrices.
+# TODO: pivoting strategy in padic_qr does not provide the correct guarantees for this
+# algorithm. I should implement a full-pivoted version.
+import Hecke.nullspace
+function nullspace(A::Hecke.MatElem{padic})
+
+    println("Warning: nullspace function incorrectly programmed.")
+    
+    m = rows(A)
+    n = cols(A)
+    F = padic_qr(transpose(A))
+
+    col_list = Array{Int64,1}()
+    for i=1:min(n,m)
+        if iszero(F.R[i,:])
+            push!(col_list, i)
+        end
+    end
+
+    Pinv = fill(0,length(F.p))
+    for i=1:length(F.p)
+        Pinv[F.p[i]] = i
+    end
+    
+    Q = F.Q
+    inv_unit_lower_triangular!(Q)
+    Qinvt = transpose(Q)[Pinv,:]
+    
+    return length(col_list) + max(0,n-m), hcat(Qinvt[:, col_list], Qinvt[:,(m+1):n])  
+end
+
+function inv_unit_lower_triangular!(L)
+    m = size(L,1)
+    n = size(L,2)
+    if n != m
+        error("Square matrix required for inverse")
+    end
+
+    for k = 1:n
+        for i = k+1:n
+            L[i, k] = -(L[i:i, k:i-1] * L[k:i-1, k:k])[1,1]
+        end
+    end
+    return
+end
+
+function inv_unit_lower_triangular(L)
+    L2 = deepcopy(L)
+    inv_unit_lower_triangular!(L2)
+    return L2
 end
 
 # Needs to be more robust. Also applied to the situation A is square but not of rank 1.
@@ -241,7 +310,7 @@ function inverse_iteration!(A,shift,v)
     In = identity_matrix(A.base_ring, size(A,1))
     B = A - shift*In
 
-    if iszero(det(B))
+    if rank(B) < cols(B)
         println("Value `shift` is exact eigenvalue.")
         return nullspace(B)[2]
     end
