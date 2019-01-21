@@ -32,6 +32,14 @@ function Base.getindex(A::Hecke.Generic.Mat{T} where T, I::Array{Int64,1}, koln:
     return matrix(A.base_ring, A.entries[I,koln])
 end
 
+function Base.getindex(A::Hecke.Generic.Mat{T} where T, I::Array{Int64,1}, J::Array{Int64,1})
+    return matrix(A.base_ring, A.entries[I,J])
+end
+
+function Base.getindex(A::Hecke.Generic.Mat{T} where T, I::CartesianIndex{2})
+    return A[I[1],I[2]]
+end
+
 
 # In theory this works, but the matrix never ends up with the right shape.
 function Base.iterate(A::Hecke.Generic.Mat{T}, state=1) where T
@@ -46,7 +54,12 @@ function Hecke.matrix(A::Array{T,2} where T <: Hecke.NCRingElem)
     @assert reduce(==, [parent(x) for x in A]) 
     return matrix(parent(A[1,1], A))
 end
-                  
+
+import Base./
+function /(A :: Hecke.Generic.Mat{T}, x::T)  where T
+    return deepcopy(A) * inv(x)
+end
+
 ##############################################################################################
 #                                                                                            #
 #                          Cosmetic override to nullspace                                    #

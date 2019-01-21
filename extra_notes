@@ -7,3 +7,11 @@
 -- bug in valuation.
 -- need more flexible definitions for matrix type for convenience
 -- constant difference between NEMO matrices and HECKE matrices is frustrating.
+
+
+
+## Another idea: use forward iteration and a nullspace call. Possibly more stable than a solve call
+   with a tiny eigenvalue.
+
+## Backward solve with p-adic numbers seems unstable with small elements on the diagonal.
+## Could be improved with an svd solver.

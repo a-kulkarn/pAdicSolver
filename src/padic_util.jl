@@ -9,7 +9,7 @@ using Hecke
 #                                                                                            #
 ##############################################################################################
 
-import Base: /, +, abs 
+import Base: +, abs 
 import Hecke.valuation
 
 function +(x::padic) return x end
@@ -102,16 +102,38 @@ struct QRPadicPivoted
     Q::Hecke.Generic.MatElem{padic}
     R::Hecke.Generic.MatElem{padic}
     p::Array{Int64,1}
+    q::Array{Int64,1}
 end
 
-function padic_qr(A::Hecke.Generic.MatElem{padic})
+function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     n = size(A,1)
     L= identity_matrix(A.base_ring,n)
     U= deepcopy(A)
     P= Array(1:n)
+    Pcol=Array(1:n)
     #identity_matrix(A.base_ring,n)
     
     for k=1:min(size(A,1),size(A,2))
+
+        if col_pivot==Val{true}
+
+            norm_list = abs.((U.entries)[k:n,k:n])
+            maxn, m = findmax( norm_list );
+            
+            m=m[2]+k-1;
+            if m!=k
+                # interchange columns m and k in U
+                temp=U[:,k];
+                U[:,k]=U[:,m];
+                U[:,m]=temp;
+                
+                # interchange rows m and k in P
+                temp=Pcol[k];
+                Pcol[k]=Pcol[m];
+                Pcol[m]=temp;
+            end
+        end
+        
         norm_list = abs.((U.entries)[k:n,k])
         maxn, m = findmax( norm_list );
         if iszero(maxn) continue end
@@ -147,7 +169,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic})
             U[j,:]=U[j,:]-L[j,k]*U[k,:];
         end
     end
-    return QRPadicPivoted(L,U,P)
+    return QRPadicPivoted(L,U,P,Pcol)
 end
 
 # Assumes that |a| ≤ |b| ≠ 0. Computes a padic integer x such that |a - xb| ≤ p^N, where N is the ring precision.
@@ -185,11 +207,9 @@ end
 import Hecke.nullspace
 function nullspace(A::Hecke.MatElem{padic})
 
-    println("Warning: nullspace function incorrectly programmed.")
-    
     m = rows(A)
     n = cols(A)
-    F = padic_qr(transpose(A))
+    F = padic_qr(transpose(A), col_pivot=Val{true})
 
     col_list = Array{Int64,1}()
     for i=1:min(n,m)
@@ -207,7 +227,7 @@ function nullspace(A::Hecke.MatElem{padic})
     inv_unit_lower_triangular!(Q)
     Qinvt = transpose(Q)[Pinv,:]
     
-    return length(col_list) + max(0,n-m), hcat(Qinvt[:, col_list], Qinvt[:,(m+1):n])  
+    return length(col_list) + max(0,n-m), hcat(Qinvt[:, col_list], Qinvt[:,(m+1):n])
 end
 
 function inv_unit_lower_triangular!(L)
@@ -309,15 +329,30 @@ end
 function inverse_iteration!(A,shift,v)
     In = identity_matrix(A.base_ring, size(A,1))
     B = A - shift*In
-
+    
     if rank(B) < cols(B)
         println("Value `shift` is exact eigenvalue.")
         return nullspace(B)[2]
     end
+
+    function normalize(v)
+        maxn, m = findmax( abs.(v.entries) )
+        if iszero(maxn)
+            return v
+        end
+        return v / v[m]
+    end
     
-    pow = inv(B)
-    for i=1:100
-        v = A.base_ring.p*pow*v
+    pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)))
+
+    println(pow)
+    println("---")
+    println()
+    
+    for i=1:10
+        v = normalize(pow*v)
+        println(v)
+        println()
     end
     return v
 end
@@ -327,6 +362,9 @@ function inverse_iteration(A, shift, v)
     w = inverse_iteration!(A,shift,w)
     return w
 end
+
+
+
 
 """
 eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
