@@ -104,7 +104,8 @@ function eigspaces(A::Hecke.Generic.MatElem{T}) where T
     g = charpoly(R, A)
     rts = roots(g)
     if isempty(rts)
-        error("Not implemented if no roots of char. poly. over the finite field")
+        #error("Not implemented if no roots of char. poly. over the finite field")
+        rts = Array{T,1}()
     end
     
     Imat = identity_matrix(A.base_ring, size(A,1))

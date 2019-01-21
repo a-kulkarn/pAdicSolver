@@ -7,6 +7,12 @@ include("../src/AlgebraicSolvers.jl")
 HKE = Main.HeckeExt
 AS = Main.AlgebraicSolvers
 
+
+function test_sol(P,sol)
+    return [[p(X=>sol.entries[i,2:size(sol,2)]) for i in 1:size(sol,1)] for p in P]
+end
+
+
 Qp = PadicField(7,6)
 function Base.zero(X::Type{padic})
     return Qp(0)

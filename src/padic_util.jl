@@ -391,50 +391,69 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
         return identity_matrix(Qp, size(A)[1])
     end
 
-    scale_factor = Qp.p^Int64(min_val)
+    scale_factor = Qp(Qp.p)^min(0,Int64(-min_val))
     Aint = scale_factor * A
     
     # Solve the problem modulo p
     Amp = broadcast(modp, Aint)
     E = eigspaces(Amp)
 
+    values_lift = fill(zero(Qp), length(E.values))
+    spaces_lift = fill(zero(parent(A)), length(E.values))
+    for i in 1:length(E.values)
 
-    return [inverse_iteration(A, Qp(lift( E.values[i] )), matrix(Qp, lift(E.spaces[i])))
-            for i in 1:length(E.values)]
+        w = inverse_iteration(A, Qp(lift( E.values[i])), matrix(Qp, lift(E.spaces[i])))
+        try
+            boo, nu = iseigenvector(A,w[:,1])
+            values_lift[i] = nu
+            spaces_lift[i] = w
+
+        catch
+            error("Failure of convergence in inverse iteration. Likely a stability issue.")
+        end
+    end
+    
+    return EigenSpaceDec(values_lift, spaces_lift)
 end
 
 
 
 import LinearAlgebra.eigvecs
 function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
-
-    if size(A)[1] != size(A)[2]
-        error("Input matrix must be square.")
-    end
-    
-    Qp = A.base_ring
-    
-    # First, make everything in A a p-adic integer
-    vals_of_A = valuation.( A.entries )
-    min_val = minimum(vals_of_A)
-
-    if min_val==Inf
-        # In this case, A is the zero matrix.
-        return identity_matrix(Qp, size(A)[1])
-    end
-
-    scale_factor = Qp(Qp.p)^Int64(min_val)
-    Aint = scale_factor * A
-    
-    # Solve the problem modulo p
-    Amp = broadcast(modp, Aint)
-    E = eigen(Amp)
-    eig_pairs = [ (E.values[i], E.vectors[:,i]) for i in 1:size(E.values)[1]]
-    
-    println("Assuming that the roots of the characteristic polynomial modulo p are all distinct")
-
-    return  hcat([ inverse_iteration(A, Qp(lift(e)), matrix(Qp,lift(v))) for (e,v) in eig_pairs]...)
+    E = eigspaces(A)
+    return hcat(E.spaces...)
 end
+
+
+# function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
+
+#     if size(A)[1] != size(A)[2]
+#         error("Input matrix must be square.")
+#     end
+    
+#     Qp = A.base_ring
+    
+#     # First, make everything in A a p-adic integer
+#     vals_of_A = valuation.( A.entries )
+#     min_val = minimum(vals_of_A)
+
+#     if min_val==Inf
+#         # In this case, A is the zero matrix.
+#         return identity_matrix(Qp, size(A)[1])
+#     end
+
+#     scale_factor = Qp(Qp.p)^Int64(min(0,-min_val))
+#     Aint = scale_factor * A
+    
+#     # Solve the problem modulo p
+#     Amp = broadcast(modp, Aint)
+#     E = eigen(Amp)
+#     eig_pairs = [ (E.values[i], E.vectors[:,i]) for i in 1:size(E.values)[1]]
+    
+#     println("Assuming that the roots of the characteristic polynomial modulo p are all distinct")
+
+#     return  hcat([ inverse_iteration(A, Qp(lift(e)), matrix(Qp,lift(v))) for (e,v) in eig_pairs]...)
+# end
 
 
 # function for testing
