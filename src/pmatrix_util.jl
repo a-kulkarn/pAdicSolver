@@ -42,14 +42,15 @@ function normalized_simultaneous_eigenvalues(
     Mg = I0*M[1]
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-    E  = eigvecs(Mg) 
+    E  = eigvecs(Mg)
 
     X = matrix( Qp, fill(zero(Qp), size(E,2),length(M)))
-    for j in 1:length(M)
-        Yj = rectangular_solve(E, I0*M[j]*E)
 
+    for j in 1:length(M)
         for i in 1:size(E,2)
-            X[i,j]= Yj[i,i]
+            boo, v = iseigenvector(I0*M[j], E[:,i])
+            @assert boo
+            X[i,j] = v
         end
     end
 

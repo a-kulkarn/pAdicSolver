@@ -117,7 +117,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
 
         if col_pivot==Val{true}
 
-            norm_list = abs.((U.entries)[k:n,k:n])
+            norm_list = abs.((U.entries)[k:n,k:size(A,2)])
             maxn, m = findmax( norm_list );
             
             m=m[2]+k-1;
@@ -423,7 +423,7 @@ function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
         return identity_matrix(Qp, size(A)[1])
     end
 
-    scale_factor = Qp.p^Int64(min_val)
+    scale_factor = Qp(Qp.p)^Int64(min_val)
     Aint = scale_factor * A
     
     # Solve the problem modulo p
@@ -459,6 +459,7 @@ function iseigenvector(A,v)
     if iszero(A*v - (A*v)[i,1]/v[i,1]*v)
         return true,e
     else
+        println(A*v - (A*v)[i,1]/v[i,1]*v)
         return false
     end
 end

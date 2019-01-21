@@ -1,13 +1,13 @@
 
 
 
--- nullspace solvers in Hecke need to be replaces
+-- nullspace solvers in Hecke need to be replaced
 -- bug in Hecke nullspace over finite field
 -- bug in hensel_lift methods
 -- bug in valuation.
 -- need more flexible definitions for matrix type for convenience
 -- constant difference between NEMO matrices and HECKE matrices is frustrating.
-
+-- precision loss in 0*0? Not clear what the correct behaviour here is...
 
 
 ## Another idea: use forward iteration and a nullspace call. Possibly more stable than a solve call
