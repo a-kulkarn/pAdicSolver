@@ -9,11 +9,11 @@ AS = Main.AlgebraicSolvers
 
 
 function raw_sol_test(P,sol)
-    return [[p(X=>sol.entries[i,2:size(sol,2)]) for i in 1:size(sol,1)] for p in P]
+    return [p(X=>sol.entries[i,2:size(sol,2)]) for i in 1:size(sol,1),  p in P]
 end
 
 function rel_error(P,sol)
-    return [[p(X=>sol.entries[i,:]) for i in 1:size(sol,1)] for p in P]
+    return [p(X=>sol.entries[i,:]) for i in 1:size(sol,1),  p in P]
 end
 
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
@@ -30,6 +30,8 @@ d = 2
 M = AS.monomials(X,0:d)
 s = length(M)
 
+for i=1:10
+
 #P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
 P = hcat( [ [ 2*rand(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
@@ -41,5 +43,6 @@ println(sol,"\n")
 
 Er = rel_error(P,sol)
 println("-- Rel error: ")
-println(Er);
-
+display(Er)
+println()
+end

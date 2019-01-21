@@ -333,6 +333,7 @@ end
 # A*w - λ*w converges to zero. Here, λ is the unique eigenvalue closest to `shift`, (if it is unique).
 #
 # TODO: I should really optimize and stabilize this later
+const TESTFLAG=false
 function inverse_iteration!(A,shift,v)
     In = identity_matrix(A.base_ring, size(A,1))
     B = A - shift*In
@@ -352,19 +353,25 @@ function inverse_iteration!(A,shift,v)
     
     pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)))
 
-    println("---pow---")
-    println(pow)
-    println("---")
-    println()
+    if TESTFLAG
+        println("---pow---")
+        println(pow)
+        println("---")
+        println()
+    end
     
     for i=1:10
         v = normalize(pow*v)
-        println(v)
-        println()
+        if TESTFLAG
+            println(v)
+            println()
+        end
     end
 
-    println("---end inv iteration---")
-    println()
+    if TESTFLAG
+        println("---end inv iteration---")
+        println()
+    end
     
     return v
 end
