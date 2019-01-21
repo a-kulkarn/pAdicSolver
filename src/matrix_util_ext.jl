@@ -60,6 +60,14 @@ function /(A :: Hecke.Generic.Mat{T}, x::T)  where T
     return deepcopy(A) * inv(x)
 end
 
+
+# Typesafe version of hcat-splat. Apparently there is a way to make this more efficient.
+function colcat(L::Array{T,1} where T <: Hecke.Generic.Mat{S} where S)
+    if isempty(L)
+        return T
+    end
+end
+
 ##############################################################################################
 #                                                                                            #
 #                          Cosmetic override to nullspace                                    #
@@ -87,12 +95,15 @@ end
 ##############################################################################################
 
 
+# TODO: Assert the correct type for the parent.
 struct MyEigen{T}
+    base_ring::Any
     values::Array{T,1}
     vectors::Hecke.Generic.MatElem{T}
 end
 
 struct EigenSpaceDec{T}
+    base_ring::Any
     values::Array{T,1}
     spaces::Array{S, 1} where S <: Hecke.Generic.MatElem{T}
 end
@@ -110,7 +121,7 @@ function eigspaces(A::Hecke.Generic.MatElem{T}) where T
     
     Imat = identity_matrix(A.base_ring, size(A,1))
 
-    return EigenSpaceDec( rts, [ my_nullspace(A-r*Imat)[2] for r in rts])
+    return EigenSpaceDec( A.base_ring, rts, [ my_nullspace(A-r*Imat)[2] for r in rts])
 end
     
 # Returns an eigen factorization structure like the default LinearAlgebra.eigen function.
@@ -124,16 +135,24 @@ over the base ring.
 """
 function eigen(A::Hecke.Generic.MatElem{T}) where T
     E = eigspaces(A)
-    eig_vals = vcat([fill( E.values[i] , size(E.spaces[i],2) ) for i=1:size(E.values,1)]...)
-    eig_vecs = hcat(E.spaces...)
-    
-    return MyEigen(eig_vals, eig_vecs)
+    eig_vals = Array{T,1}(vcat([fill( E.values[i] , size(E.spaces[i],2) ) for i=1:size(E.values,1)]...))
+    eig_vecs = _spacecat(E)
+    return MyEigen(E.base_ring, eig_vals, eig_vecs)
+end
+
+# Typesafe version of hcat-splat
+function _spacecat(E::EigenSpaceDec)
+    if isempty(E.spaces)
+        return matrix(E.base_ring, fill(zero(FlintZZ),0,0))
+    else
+        return hcat(E.spaces...)
+    end
 end
 
 # See usual eigvecs
 import LinearAlgebra.eigvecs
 function eigvecs(A::Hecke.Generic.MatElem{T}) where T
-    return eigen(A).vectors    
+    return _spacecat(eigspaces(A))
 end
 
 # See usual eigvals

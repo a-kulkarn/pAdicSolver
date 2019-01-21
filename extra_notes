@@ -15,3 +15,8 @@
 
 ## Backward solve with p-adic numbers seems unstable with small elements on the diagonal.
 ## Could be improved with an svd solver.
+
+
+** Endgame of inverse iteration needs adjustments. If the initial subspace in the iteration has dimension
+larger than 1, this tends to cause problems. This scenario is "Zariski closed", but for small primes and
+relatively small polynomial systems, there is actually a decent chance of this occurring accidentally.

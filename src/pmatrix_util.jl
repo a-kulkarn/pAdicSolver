@@ -43,9 +43,8 @@ function normalized_simultaneous_eigenvalues(
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     E  = eigvecs(Mg)
-
+    
     X = matrix( Qp, fill(zero(Qp), size(E,2),length(M)))
-
     for j in 1:length(M)
         for i in 1:size(E,2)
             boo, v = iseigenvector(I0*M[j], E[:,i])
@@ -56,8 +55,16 @@ function normalized_simultaneous_eigenvalues(
 
     function normalize_solution!(Xi, ish)
         Sol = Xi
+        
         if (!ish)
-            for i in 1:size(Sol,1) Sol[i,:] *= inv(Sol[i,1]) end
+            for i in 1:size(Sol,1)
+                scale_factor = Sol[i,1]
+                if iszero(scale_factor)
+                    scale_factor=Qp(1)
+                end
+
+                Sol[i,:] *= inv(scale_factor)
+            end
         #else
             # do nothing otherwise, for now.
         end

@@ -111,7 +111,7 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     M = mult_matrices(B, X, Nr, L, ish)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
 
-    if true
+    if false
         println("TESTING MODE: Computation incomplete. Returning partial result.")
         return M, F, B, N, Nr
     end

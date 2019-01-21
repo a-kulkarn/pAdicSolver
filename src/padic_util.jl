@@ -49,8 +49,15 @@ function rand(Qp::FlintPadicField)
     return Qp(rand(1:p^N))
 end
 
+
 function random_test_matrix(Qp)
-    return matrix(Qp, rand.(fill(1:7^Qp.prec_max),4,4))
+    A = matrix(Qp, fill(zero(Qp),4,4))
+    for i=1:4
+        for j=1:4
+            A[i,j] = rand(Qp)
+        end
+    end
+    return A
 end
 
 ##############################################################################################
@@ -345,6 +352,7 @@ function inverse_iteration!(A,shift,v)
     
     pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)))
 
+    println("---pow---")
     println(pow)
     println("---")
     println()
@@ -354,6 +362,10 @@ function inverse_iteration!(A,shift,v)
         println(v)
         println()
     end
+
+    println("---end inv iteration---")
+    println()
+    
     return v
 end
 
@@ -391,7 +403,7 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
         return identity_matrix(Qp, size(A)[1])
     end
 
-    scale_factor = Qp(Qp.p)^min(0,Int64(-min_val))
+    scale_factor = Qp(Qp.p)^max(0,Int64(-min_val))
     Aint = scale_factor * A
     
     # Solve the problem modulo p
@@ -403,26 +415,22 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
     for i in 1:length(E.values)
 
         w = inverse_iteration(A, Qp(lift( E.values[i])), matrix(Qp, lift(E.spaces[i])))
-        try
-            boo, nu = iseigenvector(A,w[:,1])
-            values_lift[i] = nu
-            spaces_lift[i] = w
-
-        catch
+        
+        boo, nu = iseigenvector(A,w[:,1])
+        if !boo || typeof(nu) == String
+            println("-------error data-------")
+            println(nu)            
             error("Failure of convergence in inverse iteration. Likely a stability issue.")
         end
+
+        values_lift[i] = nu
+        spaces_lift[i] = w
+
     end
     
-    return EigenSpaceDec(values_lift, spaces_lift)
+    return EigenSpaceDec(Qp, values_lift, spaces_lift)
 end
 
-
-
-import LinearAlgebra.eigvecs
-function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
-    E = eigspaces(A)
-    return hcat(E.spaces...)
-end
 
 
 # function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
@@ -458,28 +466,27 @@ end
 
 # function for testing
 """
-Computes if v is an eigenvector of A. If so, returns the eigenvalue as well.
+Computes if v is an eigenvector of A. If so, returns the eigenvalue as well. If not, return the error.
 
-TODO: This function needs some work
+TODO: This function needs some work. Also the wacky return structure should be changed.
 """
 function iseigenvector(A,v)
     i=1
-    while i<=size(v,2)
+    while i<=size(v,1)
         if !iszero(v[i,1])
             break
         end
         i+=1
     end
-    if i>size(v,2)
-        return false
+    if i>size(v,1)
+        return false, "zero"
     end
     e = (A*v)[i,1]/v[i,1]
 
     if iszero(A*v - (A*v)[i,1]/v[i,1]*v)
         return true,e
     else
-        println(A*v - (A*v)[i,1]/v[i,1]*v)
-        return false
+        return false, A*v - (A*v)[i,1]/v[i,1]*v
     end
 end
 
