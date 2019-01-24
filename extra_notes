@@ -4,9 +4,9 @@
 -- nullspace solvers in Hecke need to be replaced
 -- bug in Hecke nullspace over finite field
 -- bug in hensel_lift methods
--- bug in valuation.
+-- bug in valuation (fixed in my version).
 -- need more flexible definitions for matrix type for convenience
--- constant difference between NEMO matrices and HECKE matrices is frustrating.
+-- constant difference between Generic.mat{T} and nmod_mat, fmpz_mat types is a bit irritating.
 -- precision loss in 0*0? Not clear what the correct behaviour here is...
 
 
