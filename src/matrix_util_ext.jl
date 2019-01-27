@@ -20,9 +20,60 @@ import Hecke: Generic.Mat, Generic.MatElem, nmod_mat, Generic.charpoly
 # NOTE: Sadly, this does not hook into Julia's dot-broadcast syntax. In theory it is possible
 # to broadcast and return the same data type, but I don't know how to do that.
 # 
-function Base.broadcast(f, A::Hecke.Generic.Mat{T} where T)
-    return matrix( parent(f(A[1,1])), f.(A.entries))
+#function Base.broadcast(f, A::Hecke.Generic.Mat{T} where T)
+#    return matrix( parent(f(A[1,1])), f.(A.entries))
+#end
+
+
+struct MyStyle <: Base.BroadcastStyle end
+
+bcstyle = Broadcast.Broadcasted{MyStyle,
+                                 Tuple{Base.OneTo{Int64},Base.OneTo{Int64}},
+                                 S,
+                                 Tuple{Hecke.Generic.Mat{T}}} where S<:Function where T
+
+    
+#Base.BroadcastStyle(::Type{<:Hecke.Generic.Mat{T}}) where T = Broadcast.Style{Hecke.Generic.Mat{T}}()
+
+Base.BroadcastStyle(::Type{<:Hecke.Generic.Mat{T}} where T) = MyStyle()
+
+Base.broadcastable(A::Hecke.Generic.Mat{T} where T) = deepcopy(A)
+
+
+function Base.similar(
+    bc::Broadcast.Broadcasted{MyStyle,
+                                 Tuple{Base.OneTo{Int64},Base.OneTo{Int64}},
+                                 S,
+                                 Tuple{Hecke.Generic.Mat{padic}}} where S<:Function,
+    ::Type{padic})
+
+
+    
+    # Scan the inputs for a nemo matrix:
+    A = find_nemo_mat(bc)
+    # Use the data fields to create the output
+    println("typeof similar(A): " , typeof(similar(A)), typeof(A))
+    return similar(A)
 end
+
+function Base.copyto!(X::Hecke.Generic.Mat{padic}, bc::bcstyle)
+    Y = bc.args[1]
+    X.entries = bc.f.(Y.entries)
+    X.base_ring = Y.base_ring    
+    return X
+end
+
+#similar(bc::Base.Broadcasted{Base.Broadcast.Style{MatType}}, ::Type{ElType}) where {N,ElType} =
+#   similar(Array{ElType}, axes(bc))
+
+find_nemo_mat(bc::Base.Broadcast.Broadcasted) = find_nemo_mat(bc.args)
+find_nemo_mat(args::Tuple) = find_nemo_mat(find_nemo_mat(args[1]), Base.tail(args))
+find_nemo_mat(x) = x
+find_nemo_mat(a::Hecke.Generic.Mat, rest) = a
+find_nemo_mat(::Any, rest) = find_nemo_mat(rest)
+
+
+#### end broadcast interface.
 
 function Base.getindex(A::Hecke.Generic.Mat{T} where T, koln::Colon, I::Array{Int64,1})
     return matrix(A.base_ring, A.entries[koln,I])
