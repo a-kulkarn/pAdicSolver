@@ -414,7 +414,7 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
     Aint = scale_factor * A
     
     # Solve the problem modulo p
-    Amp = broadcast(modp, Aint)
+    Amp = modp.(Aint)
     E = eigspaces(Amp)
 
     values_lift = fill(zero(Qp), length(E.values))

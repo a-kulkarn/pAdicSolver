@@ -33,38 +33,51 @@ bcstyle = Broadcast.Broadcasted{MyStyle,
                                  Tuple{Hecke.Generic.Mat{T}}} where S<:Function where T
 
     
-#Base.BroadcastStyle(::Type{<:Hecke.Generic.Mat{T}}) where T = Broadcast.Style{Hecke.Generic.Mat{T}}()
 
 Base.BroadcastStyle(::Type{<:Hecke.Generic.Mat{T}} where T) = MyStyle()
-
 Base.broadcastable(A::Hecke.Generic.Mat{T} where T) = deepcopy(A)
 
 
-function Base.similar(
-    bc::Broadcast.Broadcasted{MyStyle,
-                                 Tuple{Base.OneTo{Int64},Base.OneTo{Int64}},
-                                 S,
-                                 Tuple{Hecke.Generic.Mat{padic}}} where S<:Function,
-    ::Type{padic})
-
-
-    
+function Base.similar(bc::bcstyle,t::Type{T} where T<:NCRingElem)
     # Scan the inputs for a nemo matrix:
     A = find_nemo_mat(bc)
+    
     # Use the data fields to create the output
-    println("typeof similar(A): " , typeof(similar(A)), typeof(A))
-    return similar(A)
+    if isempty(A.entries)
+        return similar(A.entries)
+    end
+    
+    val = bc.f(A[1,1])
+    init = fill(val, size(A)[1], size(A)[2])
+
+    if typeof(val) <: NCRingElem
+        return matrix(val.parent, init)
+    else
+        return init
+    end
 end
 
-function Base.copyto!(X::Hecke.Generic.Mat{padic}, bc::bcstyle)
+function Base.copyto!(X::Hecke.Generic.Mat{T} where T, bc::bcstyle)
     Y = bc.args[1]
     X.entries = bc.f.(Y.entries)
     X.base_ring = Y.base_ring    
     return X
 end
 
-#similar(bc::Base.Broadcasted{Base.Broadcast.Style{MatType}}, ::Type{ElType}) where {N,ElType} =
-#   similar(Array{ElType}, axes(bc))
+# Sigh...so we need to do something else for nmod_mats again.
+function Base.copyto!(X::Hecke.nmod_mat, bc::bcstyle)
+    Y = bc.args[1]
+    X = matrix(X.base_ring, bc.f.(Y.entries))
+    return X
+end
+
+
+function Base.copyto!(X::Array{T,2} where T, bc::bcstyle)
+    Y = bc.args[1]
+    X = bc.f.(Y.entries)
+    return X
+end
+
 
 find_nemo_mat(bc::Base.Broadcast.Broadcasted) = find_nemo_mat(bc.args)
 find_nemo_mat(args::Tuple) = find_nemo_mat(find_nemo_mat(args[1]), Base.tail(args))
