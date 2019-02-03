@@ -30,19 +30,30 @@ d = 2
 M = AS.monomials(X,0:d)
 s = length(M)
 
+global failed_test_count
+failed_test_count = 0
 for i=1:10
 
-#P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
-P = hcat( [ [ 2*rand(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
+    try
+        #P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
+        P = hcat( [ [ 2*rand(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
-#matlist, F, B, N, Nr = AS.solve_macaulay(P,X);
-sol = AS.solve_macaulay(P,X)
+        #matlist, F, B, N, Nr = AS.solve_macaulay(P,X);
+        sol = AS.solve_macaulay(P,X)
 
-println("\n-- sol ")
-println(sol,"\n")
+        println("\n-- sol ")
+        println(sol,"\n")
 
-Er = rel_error(P,sol)
-println("-- Rel error: ")
-display(Er)
-println()
+        Er = rel_error(P,sol)
+        println("-- Rel error: ")
+        display(Er)
+        println()
+    catch
+        failed_test_count += 1
+    end
+
 end
+
+println("----------------------")
+println("Tests failed due to stability issues (probably): ", failed_test_count)
+

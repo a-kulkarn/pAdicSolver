@@ -57,6 +57,23 @@ function Base.similar(bc::bcstyle,t::Type{T} where T<:NCRingElem)
     end
 end
 
+# In the case the output type has no parent, or doesn't make sense as a matrix, or is a
+# Julia default type (like Int64), return an Array
+function Base.similar(bc::bcstyle,t::Type{T} where T)
+    # Scan the inputs for a nemo matrix:
+    A = find_nemo_mat(bc)
+    
+    # Use the data fields to create the output
+    if isempty(A.entries)
+        return similar(A.entries)
+    end
+    
+    val = bc.f(A[1,1])
+    init = fill(val, size(A)[1], size(A)[2])
+    return init
+end
+
+
 function Base.copyto!(X::Hecke.Generic.Mat{T} where T, bc::bcstyle)
     Y = bc.args[1]
     X.entries = bc.f.(Y.entries)
@@ -64,7 +81,7 @@ function Base.copyto!(X::Hecke.Generic.Mat{T} where T, bc::bcstyle)
     return X
 end
 
-# Sigh...so we need to do something else for nmod_mats again.
+# We need to do something else for nmod_mats again.
 function Base.copyto!(X::Hecke.nmod_mat, bc::bcstyle)
     Y = bc.args[1]
     X = matrix(X.base_ring, bc.f.(Y.entries))
@@ -104,6 +121,9 @@ function Base.getindex(A::Hecke.Generic.Mat{T} where T, I::CartesianIndex{2})
     return A[I[1],I[2]]
 end
 
+function Base.setindex!(A::Hecke.Generic.Mat{T} where T, x, I::CartesianIndex{2})
+    return setindex!(A,x,I[1],I[2])
+end
 
 # In theory this works, but the matrix never ends up with the right shape.
 function Base.iterate(A::Hecke.Generic.Mat{T}, state=1) where T
