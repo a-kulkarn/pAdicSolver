@@ -114,84 +114,157 @@ end
 
 function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     n = size(A,1)
+    m = size(A,2)
     L= identity_matrix(A.base_ring,n)
-    U= deepcopy(A)
+    Umat= deepcopy(A)
+    U = Umat.entries
     P= Array(1:n)
-    Pcol=Array(1:n)
+    Pcol=Array(1:size(A,2))
     #identity_matrix(A.base_ring,n)
+
+    # We're going to cache the maximum value of the matrix at each step, so we save an iteration pass
+    # through the matrix.
+    norm_list = abs.(U[1:n,1:m])
+    global max_val, max_val_index = findmax( norm_list );
+
+    # Allocate a 2-element array to hold the index of the maximum valuation.
+    global max_val_index_mut = [x for x in max_val_index.I]
+
+    global this_cant_be_right = padic(U[1,1].N)
+    global this_cant_be_right2 = padic(U[1,1].N)
+    
+    # Allocate specific working memory for multiplications.
+    global container_for_product = padic(U[1,1].N)
     
     for k=1:min(size(A,1),size(A,2))
 
         if col_pivot==Val{true}
 
-            norm_list = abs.((U.entries)[k:n,k:size(A,2)])
-            maxn, m = findmax( norm_list );
+            #norm_list = abs.(U[k:n,k:size(A,2)])
+            #maxn, m = findmax( norm_list );
+            #println("max found")
             
-            m=m[2]+k-1;
-            if m!=k
+            col_index=max_val_index_mut[2]+k-1;
+            if col_index!=k
                 # interchange columns m and k in U
                 temp=U[:,k];
-                U[:,k]=U[:,m];
-                U[:,m]=temp;
+                U[:,k]=U[:,col_index];
+                U[:,col_index]=temp;
                 
-                # interchange rows m and k in P
+                # interchange entries m and k in Pcol
                 temp=Pcol[k];
-                Pcol[k]=Pcol[m];
-                Pcol[m]=temp;
+                Pcol[k]=Pcol[col_index];
+                Pcol[col_index]=temp;
             end
         end
         
-        norm_list = abs.((U.entries)[k:n,k])
-        maxn, m = findmax( norm_list );
+        norm_list = abs.(U[k:n,k])
+        maxn, row_pivot_index = findmax( norm_list );
         if iszero(maxn) continue end
-            
-        m=m+k-1;
-        if m!=k
+
+        println("max found")
+        row_pivot_index=row_pivot_index+k-1;
+        if row_pivot_index!=k
             # interchange rows m and k in U
             temp=U[k,:];
-            U[k,:]=U[m,:];
-            U[m,:]=temp;
+            U[k,:]=U[row_pivot_index,:];
+            U[row_pivot_index,:]=temp;
             
-            # interchange rows m and k in P
+            # interchange entries m and k in P
             temp=P[k];
-            P[k]=P[m];
-            P[m]=temp;
+            P[k]=P[row_pivot_index];
+            P[row_pivot_index]=temp;
 
             #swap columns corresponding to the row operations already done
             if k >= 2
                 Lent = L.entries
                 temp=Lent[k,1:k-1];
-                Lent[k,1:k-1]=Lent[m,1:k-1];
-                Lent[m,1:k-1]=temp;
+                Lent[k,1:k-1]=Lent[row_pivot_index,1:k-1];
+                Lent[row_pivot_index,1:k-1]=temp;
             end
         end
-        for j=k+1:n
-            # A totally unneccesary prec. loss can be avoided here.
-            # Conducting a division gives an exact result in one matrix, but reduces precision in
-            # the other. Instead, we attempt to avoid the operation unless it is well-conditioned.
-            #L[j,k]=U[j,k]*inv(U[k,k]);
-            #U[j,:]=U[j,:]-L[j,k]*U[k,:];
+        println("copy performed")
 
-            L[j,k]= _precision_stable_division(U[j,k], U[k,k])
-            U[j,:]=U[j,:]-L[j,k]*U[k,:];
+        max_val = Inf
+
+        # Note to self: with Julia, the optimal thing to do is split up the row operations and write a for loop.
+        # The entries left of the k-th column are zero, so skip these.
+        ## Cache the values of L[j,k] first.
+        if iszero(U[k,k]) continue end # We have already pivoted so that abs(U[k,k]) is maximal.
+        @time for j=k+1:n
+            L[j,k]= _unsafe_precision_stable_division(U[j,k], U[k,k])
         end
+
+        for j=k+1:n
+            U[j,k] = zero(A.base_ring)
+        end
+        
+        @time for r=k+1:m
+            for j=k+1:n
+                # Compute U[j,r] = U[j,r] - L[j,k]*U[k,r]                
+                Hecke.mul!(container_for_product, L[j,k], U[k,r])
+                _unsafe_minus!(U[j,r], container_for_product)
+                
+                # Update the biggest valuaton element
+                if valuation(U[j,r]) < max_val
+                    max_val = valuation(U[j,r])
+                    max_val_index_mut[1] = j
+                    max_val_index_mut[2] = r
+                end
+            end
+        end
+        println("row operations performed")
+        println(k)
     end
-    return QRPadicPivoted(L,U,P,Pcol)
+    return QRPadicPivoted(L,Umat,P,Pcol)
+end
+
+# Performs subtraction in-place, x-> x-y 
+function _unsafe_minus!(x::padic, y::padic)
+    x.N = min(x.N, y.N)
+    ccall((:padic_sub, :libflint), Nothing,
+          (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
+          x, x, y, parent(x))
+    return
+end
+
+# Performs multiplication and stores the result in a preexisting container
+@inline function _unsafe_mult!(container::padic, x::padic, y::padic)
+   container.N = min(x.N + y.v, y.N + x.v)
+   ccall((:padic_mul, :libflint), Nothing,
+         (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
+               container, x, y, parent(x))
+   return
 end
 
 # Assumes that |a| ≤ |b| ≠ 0. Computes a padic integer x such that |a - xb| ≤ p^N, where N is the ring precision.
-# TODO: investigate the precision.
-#
-function _precision_stable_division(a::padic, b::padic)
-    Qp = parent(b)
-    #if iszero(b) error("DivideError: integer division error") end
-    if iszero(a) return zero(Qp) end
-    
-    x = Qp(a.u) * inv(Qp(b.u))
+# This prevents the division of small numbers by powers of p.
+## Somehow, this is slower than the other function...
+function _unsafe_precision_stable_division(a::padic, b::padic)
+
+    if iszero(a) return a end
+
+    x = a*inv(b)
     x.v = a.v - b.v
-    # x.N = something...
+    x.N = b.N #This is wrong! fix after seminar.
+    
     return x
 end
+
+
+
+# TODO: investigate the precision.
+#
+# function _precision_stable_division(a::padic, b::padic)
+#     Qp = parent(b)
+#     #if iszero(b) error("DivideError: integer division error") end
+#     if iszero(a) return zero(Qp) end
+    
+#     x = Qp(a.u) * inv(Qp(b.u))
+#     x.v = a.v - b.v
+#     # x.N = something...
+#     return x
+# end
 
 # stable version of nullspace for padic matrices.
 function rank(A::Hecke.MatElem{padic})
