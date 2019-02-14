@@ -27,6 +27,15 @@ function valuation(x::padic)
     return Int64(x.v)
 end
 
+# typesafe version
+function float64_valuation(x::padic)
+    if iszero(x)
+        return Inf
+    end
+    return Float64(x.v)
+end
+
+
 function abs(x::padic)
     p = parent(x).p
     return Float64(p)^(-valuation(x))
@@ -113,33 +122,54 @@ struct QRPadicPivoted
 end
 
 function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
+
+    # Set constants
     n = size(A,1)
     m = size(A,2)
+    basezero = zero(A.base_ring)
+    
     L= identity_matrix(A.base_ring,n)
+    Lent = L.entries  
     Umat= deepcopy(A)
     U = Umat.entries
+    
     P= Array(1:n)
     Pcol=Array(1:size(A,2))
     #identity_matrix(A.base_ring,n)
 
-    # We're going to cache the maximum value of the matrix at each step, so we save an iteration pass
+    # We cache the maximum value of the matrix at each step, so we save an iteration pass
     # through the matrix.
     norm_list = abs.(U[1:n,1:m])
-    global max_val, max_val_index = findmax( norm_list );
+    max_val, max_val_index = findmax( norm_list );
 
-    # Allocate a 2-element array to hold the index of the maximum valuation.
-    global max_val_index_mut = [x for x in max_val_index.I]
-
-    global this_cant_be_right = padic(U[1,1].N)
-    global this_cant_be_right2 = padic(U[1,1].N)
     
     # Allocate specific working memory for multiplications.
-    global container_for_product = padic(U[1,1].N)
+    container_for_swap = padic(U[1,1].N)
+    container_for_product = padic(U[1,1].N)
+
+    # Allocate a 2-element array to hold the index of the maximum valuation.
+    max_val_index_mut = [x for x in max_val_index.I]
+
+    # Allocate a function to zero consecutive entries of a column
+    function zero_subdiagonal_of_column!(U,k::Int64)
+        for j = k+1:n
+            zero!(U[j,k])
+        end
+    end
+
+    # The index of the diagonal point is (k,k)
+    function swap_prefix_of_row!(L,k::Int64,i::Int64)
+        for r=1:k-1
+            container_for_swap = Lent[k,r]
+            Lent[k,r] = Lent[i,r] 
+            Lent[i,r] = Lent[k,r]
+        end
+        return
+    end
     
-    for k=1:min(size(A,1),size(A,2))
+    for k=1:(min(n,m)::Int64)
 
         if col_pivot==Val{true}
-
             #norm_list = abs.(U[k:n,k:size(A,2)])
             #maxn, m = findmax( norm_list );
             #println("max found")
@@ -162,62 +192,69 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
         maxn, row_pivot_index = findmax( norm_list );
         if iszero(maxn) continue end
 
-        println("max found")
         row_pivot_index=row_pivot_index+k-1;
         if row_pivot_index!=k
-            # interchange rows m and k in U
-            temp=U[k,:];
-            U[k,:]=U[row_pivot_index,:];
-            U[row_pivot_index,:]=temp;
+            # interchange rows `row_pivot_index` and `k` in U
+            #temp=U[k,:];
+            #U[k,:]=U[row_pivot_index,:];
+            #U[row_pivot_index,:]=temp;
+            for r=1:m
+                U[k,r], U[row_pivot_index,r] = U[row_pivot_index,r], U[k,r]
+            end               
             
-            # interchange entries m and k in P
-            temp=P[k];
-            P[k]=P[row_pivot_index];
-            P[row_pivot_index]=temp;
+            # interchange entries `row_pivot_index` and k in P
+            P[k],P[row_pivot_index] = P[row_pivot_index],P[k]
+            #temp=P[k];
+            #P[k]=P[row_pivot_index];
+            #P[row_pivot_index]=temp;
 
-            #swap columns corresponding to the row operations already done
-            if k >= 2
-                Lent = L.entries
-                temp=Lent[k,1:k-1];
-                Lent[k,1:k-1]=Lent[row_pivot_index,1:k-1];
-                Lent[row_pivot_index,1:k-1]=temp;
-            end
+            # swap columns corresponding to the row operations already done.
+            # NOTE: there is nothing to do if k<2.
+            #for r=1:k-1
+            #    container_for_swap = Lent[k,r]
+            #    Lent[k,r] = Lent[row_pivot_index,r] 
+            #    Lent[row_pivot_index,r] = Lent[k,r]
+            #end
+            swap_prefix_of_row!(Lent, k, row_pivot_index)
         end
-        println("copy performed")
-
+        
         max_val = Inf
 
         # Note to self: with Julia, the optimal thing to do is split up the row operations and write a for loop.
         # The entries left of the k-th column are zero, so skip these.
         ## Cache the values of L[j,k] first.
+        #     
         if iszero(U[k,k]) continue end # We have already pivoted so that abs(U[k,k]) is maximal.
-        @time for j=k+1:n
-            L[j,k]= _unsafe_precision_stable_division(U[j,k], U[k,k])
+        for j=k+1:n
+            _unsafe_precision_stable_division!(L[j,k],U[j,k], U[k,k])
         end
 
-        for j=k+1:n
-            U[j,k] = zero(A.base_ring)
-        end
+        #j=k+1
+        #while j<= size(A,1)
+        #    zero!(U[j,k])
+        #    j += 1
+        #end
+        zero_subdiagonal_of_column!(U,k)
         
-        @time for r=k+1:m
+        for r=k+1:m
             for j=k+1:n
                 # Compute U[j,r] = U[j,r] - L[j,k]*U[k,r]                
                 Hecke.mul!(container_for_product, L[j,k], U[k,r])
                 _unsafe_minus!(U[j,r], container_for_product)
                 
                 # Update the biggest valuaton element
-                if valuation(U[j,r]) < max_val
-                    max_val = valuation(U[j,r])
+                if float64_valuation(U[j,r]) < max_val
+                    max_val = float64_valuation(U[j,r])
                     max_val_index_mut[1] = j
                     max_val_index_mut[2] = r
                 end
             end
         end
-        println("row operations performed")
-        println(k)
+        #println("row operations performed: ",k)
     end
     return QRPadicPivoted(L,Umat,P,Pcol)
 end
+
 
 # Performs subtraction in-place, x-> x-y 
 function _unsafe_minus!(x::padic, y::padic)
@@ -240,17 +277,45 @@ end
 # Assumes that |a| ≤ |b| ≠ 0. Computes a padic integer x such that |a - xb| ≤ p^N, where N is the ring precision.
 # This prevents the division of small numbers by powers of p.
 ## Somehow, this is slower than the other function...
-function _unsafe_precision_stable_division(a::padic, b::padic)
+#=
+function _unsafe_precision_stable_division!(container::padic, a::padic, b::padic)
 
     if iszero(a) return a end
 
-    x = a*inv(b)
-    x.v = a.v - b.v
-    x.N = b.N #This is wrong! fix after seminar.
+    Hecke.mul!(container, a, inv(b))
+    container.v = container.v - container.v
+    container.N = container.N #This is wrong! fix after seminar.
     
-    return x
+    return
+end
+=#
+
+# Try again, hope for more speed!
+function _unsafe_precision_stable_division!(container::padic, a::padic, b::padic)
+
+    if iszero(a) return a end
+    # Because the division is guarenteed to be stable, manually set the precsion.
+    container.N = min(a.N, b.N)
+    ctx = container.parent
+
+    ccall((:padic_div, :libflint), Cint,
+          (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
+          container, a, b, ctx)    
+    return
 end
 
+
+# function divexact(a::padic, b::padic)
+#    iszero(b) && throw(DivideError())
+#    check_parent(a, b)
+#    ctx = parent(a)
+#    z = padic(min(a.N - b.v, b.N - 2*b.v + a.v))
+#    z.parent = ctx
+#    ccall((:padic_div, :libflint), Cint,
+#          (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
+#                z, a, b, ctx)
+#    return z
+# end
 
 
 # TODO: investigate the precision.
