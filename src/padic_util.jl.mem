@@ -158,11 +158,11 @@
         -     end
         - 
         -     # The index of the diagonal point is (k,k)
-       32     function swap_prefix_of_row!(L,k::Int64,i::Int64)
+       16     function swap_prefix_of_row!(Lent,k::Int64,i::Int64)
         0         for r=1:k-1
         0             container_for_swap = Lent[k,r]
-        0             Lent[k,r] = Lent[i,r] 
-        0             Lent[i,r] = Lent[k,r]
+        -             Lent[k,r] = Lent[i,r] 
+        0             Lent[i,r] = container_for_swap
         -         end
         0         return
         -     end
@@ -250,7 +250,7 @@
         -                 end
         -             end
         -         end
-    51600         println("row operations performed: ",k)
+        -         #println("row operations performed: ",k)
         -     end
         0     return QRPadicPivoted(L,Umat,P,Pcol)
         - end
@@ -298,7 +298,7 @@
         -     container.N = min(a.N, b.N)
         -     ctx = container.parent
         - 
- 48060072     ccall((:padic_div, :libflint), Cint,
+ 28668288     ccall((:padic_div, :libflint), Cint,
         -           (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
         -           container, a, b, ctx)    
         0     return

@@ -158,11 +158,11 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     end
 
     # The index of the diagonal point is (k,k)
-    function swap_prefix_of_row!(L,k::Int64,i::Int64)
+    function swap_prefix_of_row!(Lent,k::Int64,i::Int64)
         for r=1:k-1
             container_for_swap = Lent[k,r]
             Lent[k,r] = Lent[i,r] 
-            Lent[i,r] = Lent[k,r]
+            Lent[i,r] = container_for_swap
         end
         return
     end
