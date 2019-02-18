@@ -40,7 +40,7 @@ function normalized_simultaneous_eigenvalues(
 
     I0 = inv(M0)  # Matrix M0 is often singular.
     Mg = I0*M[1]
-
+    
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     E  = eigvecs(Mg)
     
@@ -48,7 +48,20 @@ function normalized_simultaneous_eigenvalues(
     for j in 1:length(M)
         for i in 1:size(E,2)
             boo, v = iseigenvector(I0*M[j], E[:,i])
-            @assert boo
+
+            if !boo
+                println("-------------------------")
+                println("Error data:")
+                println(v)
+                println()
+
+                
+                println(I0*M[j]*E[:,i])
+                println()
+                
+                println(E[:,i])
+                error("Eigenvector not computed correctly.")
+            end
             X[i,j] = v
         end
     end

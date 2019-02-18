@@ -115,7 +115,7 @@
         - # with pivoting.
         - 
         - struct QRPadicPivoted
-       48     Q::Hecke.Generic.MatElem{padic}
+    37112     Q::Hecke.Generic.MatElem{padic}
         -     R::Hecke.Generic.MatElem{padic}
         -     p::Array{Int64,1}
         -     q::Array{Int64,1}
@@ -124,12 +124,12 @@
         - function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
         - 
         -     # Set constants
-        0     n = size(A,1)
-        -     m = size(A,2)
+        0     n = size(A,1)::Int64
+        -     m = size(A,2)::Int64
         0     basezero = zero(A.base_ring)
         -     
         0     L= identity_matrix(A.base_ring,n)
-        0     Lent = L.entries  
+     2640     Lent = L.entries::Array{padic,2}  
         -     Umat= deepcopy(A)
         -     U = Umat.entries
         -     
@@ -144,9 +144,10 @@
         - 
         -     
         -     # Allocate specific working memory for multiplications.
-        0     container_for_swap = padic(U[1,1].N)
+        -     container_for_swap = padic(U[1,1].N)
         -     container_for_product = padic(U[1,1].N)
-        - 
+        -     container_for_div = padic(U[1,1].N)
+        -     
         -     # Allocate a 2-element array to hold the index of the maximum valuation.
        96     max_val_index_mut = [x for x in max_val_index.I]
         - 
@@ -156,16 +157,7 @@
         0             zero!(U[j,k])
         -         end
         -     end
-        - 
-        -     # The index of the diagonal point is (k,k)
-       16     function swap_prefix_of_row!(Lent,k::Int64,i::Int64)
-        0         for r=1:k-1
-        0             container_for_swap = Lent[k,r]
-        -             Lent[k,r] = Lent[i,r] 
-        0             Lent[i,r] = container_for_swap
-        -         end
-        0         return
-        -     end
+        -     
         -     
         0     for k=1:(min(n,m)::Int64)
         - 
@@ -174,7 +166,7 @@
         -             #maxn, m = findmax( norm_list );
         -             #println("max found")
         -             
-        -             col_index=max_val_index_mut[2]+k-1;
+        -             col_index=max_val_index_mut[2]
         0             if col_index!=k
         -                 # interchange columns m and k in U
         -                 temp=U[:,k];
@@ -215,7 +207,7 @@
         -             #    Lent[k,r] = Lent[row_pivot_index,r] 
         -             #    Lent[row_pivot_index,r] = Lent[k,r]
         -             #end
-        0             swap_prefix_of_row!(Lent, k, row_pivot_index)
+        -             swap_prefix_of_row!(Lent, k, row_pivot_index)
         -         end
         -         
         0         max_val = Inf
@@ -225,8 +217,10 @@
         -         ## Cache the values of L[j,k] first.
         -         #     
         0         if iszero(U[k,k]) continue end # We have already pivoted so that abs(U[k,k]) is maximal.
+        - 
+        0         container_for_inv = inv(U[k,k])
         0         for j=k+1:n
-        0             _unsafe_precision_stable_division!(L[j,k],U[j,k], U[k,k])
+        0             Hecke.mul!(L[j,k],U[j,k], container_for_inv)
         -         end
         - 
         -         #j=k+1
@@ -255,6 +249,16 @@
         0     return QRPadicPivoted(L,Umat,P,Pcol)
         - end
         - 
+        - # The index of the diagonal point is (k,k)
+        - function swap_prefix_of_row!(Lent, k::Int64, i::Int64)
+        0     for r=1:(k-1)
+        -         dummy=1
+        -         container_for_swap = Lent[k,r]
+        -         Lent[k,r] = Lent[i,r] 
+        0         Lent[i,r] = container_for_swap
+        -     end
+        -     return
+        - end
         - 
         - # Performs subtraction in-place, x-> x-y 
         - function _unsafe_minus!(x::padic, y::padic)
@@ -293,15 +297,15 @@
         - # Try again, hope for more speed!
         - function _unsafe_precision_stable_division!(container::padic, a::padic, b::padic)
         - 
-        0     if iszero(a) return a end
+        -     if iszero(a) return a end
         -     # Because the division is guarenteed to be stable, manually set the precsion.
         -     container.N = min(a.N, b.N)
         -     ctx = container.parent
         - 
- 28668288     ccall((:padic_div, :libflint), Cint,
+        -     ccall((:padic_div, :libflint), Cint,
         -           (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
         -           container, a, b, ctx)    
-        0     return
+        -     return
         - end
         - 
         - 

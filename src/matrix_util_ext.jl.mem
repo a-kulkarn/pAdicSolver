@@ -106,7 +106,7 @@
         - #### end broadcast interface.
         - 
         - function Base.getindex(A::Hecke.Generic.Mat{T} where T, koln::Colon, I::Array{Int64,1})
-        -     return matrix(A.base_ring, A.entries[koln,I])
+        0     return matrix(A.base_ring, A.entries[koln,I])
         - end
         - 
         - function Base.getindex(A::Hecke.Generic.Mat{T} where T, I::Array{Int64,1}, koln::Colon)

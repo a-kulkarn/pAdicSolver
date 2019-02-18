@@ -18,7 +18,7 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
         Q = [monomials(X,0:d-degree(P[i])) for i in 1:length(P)]
     end
 
-    ### this looks like it can be inlined
+    ### this looks like it can be optimized a bit.
     M = []
     for i in 1:length(P)
         for m in Q[i]
@@ -26,7 +26,7 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
         end
     end
     ###    
-    coefficient_matrix(M, L)
+    return coefficient_matrix(M, L)
 end
 
 # AVI:
@@ -88,8 +88,8 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
 
     R = macaulay_mat(P, L, X, ish)
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
-    
-    #<dispatch this>    
+    println("-- -- rank of Macaulay matrix ", rank(matrix(R)))
+
     N = nullspace(R)
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
 
@@ -113,7 +113,7 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
 
     if false
         println("TESTING MODE: Computation incomplete. Returning partial result.")
-        return M, F, B, N, Nr
+        return M, F, B, N, Nr, R
     end
 
     Xi = normalized_simultaneous_eigenvalues(M,ish)

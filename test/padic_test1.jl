@@ -17,7 +17,7 @@ function rel_error(P,sol)
 end
 
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
-Qp = PadicField(89,6)
+Qp = PadicField(233,6)
 function Base.zero(X::Type{padic})
     return Qp(0)
 end
@@ -26,11 +26,10 @@ end
 X = AS.@Ring x1 x2
 n = length(X)
 
-d = 2
+d = 10
 M = AS.monomials(X,0:d)
 s = length(M)
 
-global failed_test_count
 failed_test_count = 0
 for i=1:10
 
@@ -49,7 +48,7 @@ for i=1:10
         display(Er)
         println()
     catch
-        failed_test_count += 1
+        global failed_test_count += 1
     end
 
 end

@@ -124,12 +124,12 @@ end
 function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
 
     # Set constants
-    n = size(A,1)
-    m = size(A,2)
+    n = size(A,1)::Int64
+    m = size(A,2)::Int64
     basezero = zero(A.base_ring)
     
     L= identity_matrix(A.base_ring,n)
-    Lent = L.entries  
+    Lent = L.entries::Array{padic,2}  
     Umat= deepcopy(A)
     U = Umat.entries
     
@@ -146,7 +146,8 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     # Allocate specific working memory for multiplications.
     container_for_swap = padic(U[1,1].N)
     container_for_product = padic(U[1,1].N)
-
+    container_for_div = padic(U[1,1].N)
+    
     # Allocate a 2-element array to hold the index of the maximum valuation.
     max_val_index_mut = [x for x in max_val_index.I]
 
@@ -156,16 +157,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
             zero!(U[j,k])
         end
     end
-
-    # The index of the diagonal point is (k,k)
-    function swap_prefix_of_row!(Lent,k::Int64,i::Int64)
-        for r=1:k-1
-            container_for_swap = Lent[k,r]
-            Lent[k,r] = Lent[i,r] 
-            Lent[i,r] = container_for_swap
-        end
-        return
-    end
+    
     
     for k=1:(min(n,m)::Int64)
 
@@ -174,7 +166,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
             #maxn, m = findmax( norm_list );
             #println("max found")
             
-            col_index=max_val_index_mut[2]+k-1;
+            col_index=max_val_index_mut[2]
             if col_index!=k
                 # interchange columns m and k in U
                 temp=U[:,k];
@@ -225,8 +217,10 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
         ## Cache the values of L[j,k] first.
         #     
         if iszero(U[k,k]) continue end # We have already pivoted so that abs(U[k,k]) is maximal.
+
+        container_for_inv = inv(U[k,k])
         for j=k+1:n
-            _unsafe_precision_stable_division!(L[j,k],U[j,k], U[k,k])
+            Hecke.mul!(L[j,k],U[j,k], container_for_inv)
         end
 
         #j=k+1
@@ -255,6 +249,16 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     return QRPadicPivoted(L,Umat,P,Pcol)
 end
 
+# The index of the diagonal point is (k,k)
+function swap_prefix_of_row!(Lent, k::Int64, i::Int64)
+    for r=1:(k-1)
+        dummy=1
+        container_for_swap = Lent[k,r]
+        Lent[k,r] = Lent[i,r] 
+        Lent[i,r] = container_for_swap
+    end
+    return
+end
 
 # Performs subtraction in-place, x-> x-y 
 function _unsafe_minus!(x::padic, y::padic)
