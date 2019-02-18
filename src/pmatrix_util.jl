@@ -40,6 +40,9 @@ function normalized_simultaneous_eigenvalues(
 
     #I0 = inv(M0)  # Catastrophic precision loss in this step causes issues in Eigensolver.
 
+    println("Matrix of valuations: ")
+    println(valuation.(M0))
+    
     I0 = rectangular_solve(M0,identity_matrix(M0.base_ring,size(M0,1)))
     Mg = I0*M[1]
     
@@ -49,18 +52,28 @@ function normalized_simultaneous_eigenvalues(
     E = eigvecs(Mg)
     invariant_subspaces  = eigspaces(Mg)
     
-    X = matrix( Qp, fill(zero(Qp), sum(size(V,2) for V in invariant_subspaces.spaces),length(M)))
+    #println("eigvalues: ", invariant_subspaces.values)
+    #println()
+    #println("eigspaces: ", length(invariant_subspaces.spaces))
+
+
+    X = matrix( Qp, fill(zero(Qp), length(invariant_subspaces.spaces) ,length(M)))
     for j in 1:length(M)
         for i in 1:length(invariant_subspaces.spaces)
             V = invariant_subspaces.spaces[i]
             
-            This is spaghetti code. The best things to do is merge the branches.
+            #This is spaghetti code. The best things to do is merge the branches.
             if size(V,2) == 1
-                #boo, v = iseigenvector(I0*M[j], E[:,i])
                 boo, v = iseigenvector(I0*M[j], V)
             else
-                Y = rectangular_solve(I0*M[j]*V, V)
-                v = trace(Y)/size(Y,2)
+                #println("Large invariant subspace of dimension: ", size(V,2))
+                Y = rectangular_solve(V,I0*M[j]*V)
+
+                #println()
+                #println(trace(Y))
+                #println()
+                
+                v = trace(Y)/Qp(size(Y,2))
                 boo = true
             end
 
@@ -87,13 +100,20 @@ function normalized_simultaneous_eigenvalues(
         Sol = Xi
         
         if (!ish)
-            for i in 1:size(Sol,1)
+            i=1            
+            while i <= size(Sol,1)
                 scale_factor = Sol[i,1]
                 if iszero(scale_factor)
+                    println()
+                    println("!-- Ignoring solution at infinity --!")
+                    println()
+                    
+                    Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
                     scale_factor=Qp(1)
+                else
+                    Sol[i,:] *= inv(scale_factor)
                 end
-
-                Sol[i,:] *= inv(scale_factor)
+                i+=1
             end
         #else
             # do nothing otherwise, for now.

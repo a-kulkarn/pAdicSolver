@@ -18,7 +18,9 @@ end
 
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
 # The critical case is p=89.
-Qp = PadicField(101,6)
+
+# Something really strange happens when the precision is >=60. Probably overflow.
+Qp = PadicField(89,50)
 function Base.zero(X::Type{padic})
     return Qp(0)
 end
@@ -36,14 +38,14 @@ P = [p*Qp(1) for p in P];
 
 
 #matlist, F, B, N, Nr, R = AS.solve_macaulay(P,X,15);
-sol = AS.solve_macaulay(P,X,15)
+sol = AS.solve_macaulay(P,X,27)
 
-# println("\n-- sol ")
-# println(sol,"\n")
+println("\n-- sol ")
+println(sol,"\n")
 
-# Er = rel_error(P,sol)
-# println("-- Rel error: ")
-# display(Er)
-# println()
+Er = rel_error(P,sol)
+println("-- Rel error: ")
+display(Er)
+println()
 
 

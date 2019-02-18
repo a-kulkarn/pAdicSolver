@@ -26,14 +26,14 @@ end
 X = AS.@Ring x1 x2
 n = length(X)
 
-d = 15
+d = 10
 M = AS.monomials(X,0:d)
 s = length(M)
 
 failed_test_count = 0
 for i=1:10
 
-    try
+    #try
         #P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
         P = hcat( [ [ 2*rand(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
@@ -47,9 +47,9 @@ for i=1:10
         println("-- Rel error: ")
         display(Er)
         println()
-    catch
-        global failed_test_count += 1
-    end
+    #catch
+    #    global failed_test_count += 1
+    #end
 
 end
 

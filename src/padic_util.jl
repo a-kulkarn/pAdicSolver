@@ -435,7 +435,9 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
         for i in (n+1):m
             for j in 1:cols(b)
                 if !iszero(b[i, j])
-                    println(b)
+                    #println(b)
+                    #println()
+                    println("bad entry at ", i," ",j)
                     error("The system is inconsistent.")
                 end
             end
@@ -456,9 +458,9 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
         #b.row_op(i, lambda x, _: x / scale)
 
         if !iszero(b[i,:]) && iszero(F.R[i,i])
-            println(b)
-            println()
-            println(F.R)
+            #println(b)
+            #println()
+            #println(F.R)
             error("The system is inconsistent.")
         elseif !iszero(F.R[i,i])
             b[i,:] *= inv(F.R[i,i])
@@ -477,13 +479,15 @@ end
 # TODO: I should really optimize and stabilize this later
 const TESTFLAG=false
 function inverse_iteration!(A,shift,v)
+
+    # Note: If A is not known to precision at least one, really bad things happen.
     In = identity_matrix(A.base_ring, size(A,1))
     B = A - shift*In
     
     if rank(B) < cols(B)
-        println("Value `shift` is exact eigenvalue.")
-        println(nullspace(B)[1])
-        println(B[1:10,1:10])
+        println("Value `shift` is exact eigenvalue. `shift` = ", shift)
+        #println(nullspace(B)[1])
+        #println(B[1:2,1:2])
         return nullspace(B)[2]
     end
 
@@ -566,7 +570,8 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
     for i in 1:length(E.values)
 
         w = inverse_iteration(A, Qp(lift( E.values[i])), matrix(Qp, lift(E.spaces[i])))
-        
+
+        # This is broken for larger invariant subspaces.
         boo, nu = iseigenvector(A,w[:,1])
         if !boo || typeof(nu) == String
             println("-------error data-------")
@@ -582,37 +587,6 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
     return EigenSpaceDec(Qp, values_lift, spaces_lift)
 end
 
-
-
-# function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
-
-#     if size(A)[1] != size(A)[2]
-#         error("Input matrix must be square.")
-#     end
-    
-#     Qp = A.base_ring
-    
-#     # First, make everything in A a p-adic integer
-#     vals_of_A = valuation.( A.entries )
-#     min_val = minimum(vals_of_A)
-
-#     if min_val==Inf
-#         # In this case, A is the zero matrix.
-#         return identity_matrix(Qp, size(A)[1])
-#     end
-
-#     scale_factor = Qp(Qp.p)^Int64(min(0,-min_val))
-#     Aint = scale_factor * A
-    
-#     # Solve the problem modulo p
-#     Amp = broadcast(modp, Aint)
-#     E = eigen(Amp)
-#     eig_pairs = [ (E.values[i], E.vectors[:,i]) for i in 1:size(E.values)[1]]
-    
-#     println("Assuming that the roots of the characteristic polynomial modulo p are all distinct")
-
-#     return  hcat([ inverse_iteration(A, Qp(lift(e)), matrix(Qp,lift(v))) for (e,v) in eig_pairs]...)
-# end
 
 
 # function for testing
