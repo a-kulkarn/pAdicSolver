@@ -47,33 +47,27 @@ function normalized_simultaneous_eigenvalues(
     #
     # NOTE: right now eigvecs returns the invariant subspaces
     E = eigvecs(Mg)
-    #invariant_subspaces  = eigspaces(Mg)
+    invariant_subspaces  = eigspaces(Mg)
     
-    X = matrix( Qp, fill(zero(Qp), size(E,2),length(M)))
-    
-    #X = matrix( Qp, fill(zero(Qp), sum(size(V,2) for V in invariant_subspaces.spaces),length(M)))
+    X = matrix( Qp, fill(zero(Qp), sum(size(V,2) for V in invariant_subspaces.spaces),length(M)))
     for j in 1:length(M)
-        for i in 1:size(E,2)
-        #for i in 1:length(invariant_subspaces.spaces)
-            #V = invariant_subspaces.spaces[i]
+        for i in 1:length(invariant_subspaces.spaces)
+            V = invariant_subspaces.spaces[i]
             
-            # This is spaghetti code. The best things to do is merge the branches.
-            # if size(V,2) == 1
-            #     #boo, v = iseigenvector(I0*M[j], E[:,i])
-            #     boo, v = iseigenvector(I0*M[j], V)
-            # else
-            #     Y = rectangular_solve(I0*M[j]*V, V)
-            #     v = trace(Y)/size(Y,2)
-            #     boo = true
-            # end
+            This is spaghetti code. The best things to do is merge the branches.
+            if size(V,2) == 1
+                #boo, v = iseigenvector(I0*M[j], E[:,i])
+                boo, v = iseigenvector(I0*M[j], V)
+            else
+                Y = rectangular_solve(I0*M[j]*V, V)
+                v = trace(Y)/size(Y,2)
+                boo = true
+            end
 
-            boo, v = iseigenvector(I0*M[j], E[:,i])
-            
             if !boo
                 println("-------------------------")
                 println("Error data:")
-                println("  subspace dimension: ",  size(E,2))
-                #println("subspace dimension: ",  size(V,2))
+                println("subspace dimension: ",  size(V,2))
                 println()
 
                 println("Valuations: ", minimum(valuation.(M0)), " ", minimum(valuation.(Mg)))
@@ -82,12 +76,7 @@ function normalized_simultaneous_eigenvalues(
                 println(Mg[1:5,1:5])
                 #println(v)
                 println()
-
-                
-               # println(I0*M[j]*E[:,i])
-               # println()
-                
-               # println(E[:,i])
+                              
                 error("Eigenvector not computed correctly.")
             end
             X[i,j] = v
