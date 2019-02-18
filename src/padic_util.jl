@@ -482,6 +482,8 @@ function inverse_iteration!(A,shift,v)
     
     if rank(B) < cols(B)
         println("Value `shift` is exact eigenvalue.")
+        println(nullspace(B)[1])
+        println(B[1:10,1:10])
         return nullspace(B)[2]
     end
 

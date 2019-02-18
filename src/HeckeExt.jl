@@ -1,6 +1,6 @@
 module HeckeExt
 
-export broadcast, iterate, collect, matrix, rectangular_solve, my_nullspace, eigen, eigvecs, charpoly, MyEigen
+export broadcast, iterate, collect, matrix, rectangular_solve, my_nullspace, eigen, eigvecs, eigspaces, charpoly, MyEigen
 
 export /, valuation, abs, modp, test_rings, rand, random_test_matrix, padic_qr, inverse_iteration, iseigenvector
 
