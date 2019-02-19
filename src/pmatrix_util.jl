@@ -36,7 +36,7 @@ function normalized_simultaneous_eigenvalues(
 
     M = [ matrix(A) for A in inputM]
     Qp = base_ring(M[1])
-    M0 = sum(A*rand(Qp) for A in M) # non-unit random causes problems
+    M0 = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
     #I0 = inv(M0)  # Catastrophic precision loss in this step causes issues in Eigensolver.
 

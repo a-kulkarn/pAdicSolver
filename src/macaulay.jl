@@ -61,7 +61,7 @@ end
 # X   -- variables in the polynomial system
 # rho -- monomial degree of the system. Default is the macaulay degree.
 #
-function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1 )
+function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1, test_mode=false )
     println()
     println("-- Degrees ", map(p->degree(p),P))
     ish = !any(is_not_homogeneous, P)
@@ -111,7 +111,7 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     M = mult_matrices(B, X, Nr, L, ish)
     println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
 
-    if false
+    if test_mode
         println("TESTING MODE: Computation incomplete. Returning partial result.")
         return M, F, B, N, Nr, R
     end

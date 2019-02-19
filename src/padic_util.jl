@@ -55,7 +55,13 @@ import Base.rand
 function rand(Qp::FlintPadicField)
     p = Qp.p
     N = Qp.prec_max
-    return Qp(rand(1:p^N))
+    return Qp(rand(1:BigInt(p)^N))*Qp(p)^(rand(-N:N))
+end
+
+function rand_padic_int(Qp::FlintPadicField)
+    p = Qp.p
+    N = Qp.prec_max
+    return Qp(rand(1:BigInt(p)^N))
 end
 
 
@@ -63,7 +69,7 @@ function random_test_matrix(Qp)
     A = matrix(Qp, fill(zero(Qp),4,4))
     for i=1:4
         for j=1:4
-            A[i,j] = rand(Qp)
+            A[i,j] = rand_padic_int(Qp)
         end
     end
     return A
