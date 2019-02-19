@@ -3,6 +3,15 @@
 using Hecke
 # Needs the new matrix utilities as well.
 
+# simple function to invert a permutation array.
+function invert_permutation(A::Array{Int64,1})
+    Pinv = fill(0,length(F.p))
+    for i=1:length(F.p)
+        Pinv[F.p[i]] = i
+    end
+    return Pinv
+end
+
 ##############################################################################################
 #                                                                                            #
 #                          Basic extension to padic numbers                                  #
@@ -101,7 +110,7 @@ function factor(f :: Hecke.Generic.Poly{padic})
     N = Qp.prec_max
     
     f_int = lift(f)
-    H = factor_mod_pk_init(fint,Qp.p)
+    H = factor_mod_pk_init(f_int,Qp.p)
     D = factor_mod_pk(H,N)
 
     return Dict( QpX(lift(k))=>D[k] for k in keys(D))   
@@ -196,10 +205,10 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
             P[k],P[row_pivot_index] = P[row_pivot_index],P[k]
 
             # swap columns corresponding to the row operations already done.
-            # NOTE: there is nothing to do if k<2.
             swap_prefix_of_row!(Lent, k, row_pivot_index)
         end
-        
+
+        # Reset min_valuation for selecting new pivot.
         min_val = Inf
 
         # Note to self: with Julia, the optimal thing to do is split up the row operations and write a for loop.
@@ -239,7 +248,6 @@ end
 # The index of the diagonal point is (k,k)
 function swap_prefix_of_row!(Lent, k::Int64, i::Int64)
     for r=1:(k-1)
-        dummy=1
         container_for_swap = Lent[k,r]
         Lent[k,r] = Lent[i,r] 
         Lent[i,r] = container_for_swap
@@ -282,18 +290,18 @@ end
 =#
 
 # Try again, hope for more speed!
-function _unsafe_precision_stable_division!(container::padic, a::padic, b::padic)
+# function _unsafe_precision_stable_division!(container::padic, a::padic, b::padic)
 
-    if iszero(a) return a end
-    # Because the division is guarenteed to be stable, manually set the precsion.
-    container.N = min(a.N, b.N)
-    ctx = container.parent
+#     if iszero(a) return a end
+#     # Because the division is guarenteed to be stable, manually set the precsion.
+#     container.N = min(a.N, b.N)
+#     ctx = container.parent
 
-    ccall((:padic_div, :libflint), Cint,
-          (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
-          container, a, b, ctx)    
-    return
-end
+#     ccall((:padic_div, :libflint), Cint,
+#           (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
+#           container, a, b, ctx)    
+#     return
+# end
 
 
 # function divexact(a::padic, b::padic)
@@ -321,6 +329,24 @@ end
 #     # x.N = something...
 #     return x
 # end
+
+# IMPORTANT!
+# We deviate slightly from LinearAlgebra's SVD structure by putting a diagonal matrix for S.
+struct SVDPadic
+    U::Hecke.Generic.MatElem{padic}
+    S::Hecke.Generic.MatElem{padic}
+    Vt::Hecke.Generic.MatElem{padic}
+end
+
+# A padic analogue for svd
+import LinearAlgebra.svd
+function svd(A::Hecke.Generic.MatElem{padic})
+
+    F = padic_qr(A)
+    G = padic_qr(F.R)
+
+    
+end
 
 # stable version of nullspace for padic matrices.
 function rank(A::Hecke.MatElem{padic})
@@ -360,10 +386,7 @@ function nullspace(A::Hecke.MatElem{padic})
         end
     end
 
-    Pinv = fill(0,length(F.p))
-    for i=1:length(F.p)
-        Pinv[F.p[i]] = i
-    end
+    Pinv = invert_permutation(F.p)   
     
     Q = F.Q
     inv_unit_lower_triangular!(Q)

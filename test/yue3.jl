@@ -21,7 +21,7 @@ end
 
 # At high precision there are stubborn convergence problems...
 p = 103
-Qp = PadicField(p,10)
+Qp = PadicField(p,20)
 function Base.zero(X::Type{padic})
     return Qp(0)
 end
