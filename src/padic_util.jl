@@ -4,10 +4,10 @@ using Hecke
 # Needs the new matrix utilities as well.
 
 # simple function to invert a permutation array.
-function invert_permutation(A::Array{Int64,1})
-    Pinv = fill(0,length(F.p))
-    for i=1:length(F.p)
-        Pinv[F.p[i]] = i
+function inverse_permutation(A::Array{Int64,1})
+    Pinv = fill(0,length(A))
+    for i=1:length(A)
+        Pinv[A[i]] = i
     end
     return Pinv
 end
@@ -342,10 +342,18 @@ end
 import LinearAlgebra.svd
 function svd(A::Hecke.Generic.MatElem{padic})
 
-    F = padic_qr(A)
-    G = padic_qr(F.R)
+    F = padic_qr(A, col_pivot=Val{true})
+    G = padic_qr(transpose(F.R))
 
-    
+    @assert G.p == [i for i=1:length(G.p)]
+
+    U = deepcopy(F.Q)[inverse_permutation(F.p),:]
+    S = deepcopy(G.R)
+    Vt= transpose(G.Q)[:,inverse_permutation(F.q)]
+
+    @assert iszero( A - U*S*Vt)
+
+    return SVDPadic(U,S,Vt)
 end
 
 # stable version of nullspace for padic matrices.
@@ -386,7 +394,7 @@ function nullspace(A::Hecke.MatElem{padic})
         end
     end
 
-    Pinv = invert_permutation(F.p)   
+    Pinv = inverse_permutation(F.p)   
     
     Q = F.Q
     inv_unit_lower_triangular!(Q)
