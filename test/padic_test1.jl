@@ -17,7 +17,7 @@ function rel_error(P,sol)
 end
 
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
-Qp = PadicField(101,6)
+Qp = PadicField(491,10)
 function Base.zero(X::Type{padic})
     return Qp(0)
 end
@@ -26,7 +26,7 @@ end
 X = AS.@Ring x1 x2
 n = length(X)
 
-d = 10
+d = 2
 M = AS.monomials(X,0:d)
 s = length(M)
 
@@ -35,7 +35,7 @@ for i=1:10
 
     #try
         #P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
-        P = hcat( [ [ 2*rand(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
+        P = hcat( [ [ 2*HKE.rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
         #matlist, F, B, N, Nr = AS.solve_macaulay(P,X);
         sol = AS.solve_macaulay(P,X)

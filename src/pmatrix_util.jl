@@ -38,12 +38,15 @@ function normalized_simultaneous_eigenvalues(
     Qp = base_ring(M[1])
     M0 = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
-    #I0 = inv(M0)  # Catastrophic precision loss in this step causes issues in Eigensolver.
+    I0 = inv(M0)  # Catastrophic precision loss in this step causes issues in Eigensolver.
 
-    println("Matrix of valuations: ")
-    println(valuation.(M0))
+    println("Valuations of singular values: ")
+    println(valuation.(singular_values(M0)))
     
-    I0 = rectangular_solve(M0,identity_matrix(M0.base_ring,size(M0,1)))
+    #I0 = rectangular_solve(M0,identity_matrix(M0.base_ring,size(M0,1)))
+
+    #@assert iszero(M0*I0 - identity_matrix(M0.base_ring,size(M0,1)))
+    
     Mg = I0*M[1]
     
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]

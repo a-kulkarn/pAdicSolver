@@ -65,10 +65,10 @@ function rand_padic_int(Qp::FlintPadicField)
 end
 
 
-function random_test_matrix(Qp)
-    A = matrix(Qp, fill(zero(Qp),4,4))
-    for i=1:4
-        for j=1:4
+function random_test_matrix(Qp,n=4)
+    A = matrix(Qp, fill(zero(Qp),n,n))
+    for i=1:n
+        for j=1:n
             A[i,j] = rand_padic_int(Qp)
         end
     end
@@ -140,14 +140,12 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     U = Umat.entries
     
     P= Array(1:n)
-    Pcol=Array(1:size(A,2))
-    #identity_matrix(A.base_ring,n)
+    Pcol=Array(1:m)
 
     # We cache the maximum value of the matrix at each step, so we save an iteration pass
     # through the matrix.
-    norm_list = abs.(U[1:n,1:m])
-    max_val, max_val_index = findmax( norm_list );
-
+    val_list = float64_valuation.(U)
+    min_val, min_val_index = findmin( val_list );
     
     # Allocate specific working memory for multiplications.
     container_for_swap = padic(U[1,1].N)
@@ -155,7 +153,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     container_for_div = padic(U[1,1].N)
     
     # Allocate a 2-element array to hold the index of the maximum valuation.
-    max_val_index_mut = [x for x in max_val_index.I]
+    min_val_index_mut = [x for x in min_val_index.I]
 
     # Allocate a function to zero consecutive entries of a column
     function zero_subdiagonal_of_column!(U,k::Int64)
@@ -168,11 +166,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     for k=1:(min(n,m)::Int64)
 
         if col_pivot==Val{true}
-            #norm_list = abs.(U[k:n,k:size(A,2)])
-            #maxn, m = findmax( norm_list );
-            #println("max found")
-            
-            col_index=max_val_index_mut[2]
+            col_index=min_val_index_mut[2]
             if col_index!=k
                 # interchange columns m and k in U
                 temp=U[:,k];
@@ -186,54 +180,39 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
             end
         end
         
-        norm_list = abs.(U[k:n,k])
-        maxn, row_pivot_index = findmax( norm_list );
-        if iszero(maxn) continue end
+        val_list = float64_valuation.(U[k:n,k])
+        minn, row_pivot_index = findmin( val_list );
+        if minn==Inf continue end
 
         row_pivot_index=row_pivot_index+k-1;
         if row_pivot_index!=k
+
             # interchange rows `row_pivot_index` and `k` in U
-            #temp=U[k,:];
-            #U[k,:]=U[row_pivot_index,:];
-            #U[row_pivot_index,:]=temp;
             for r=1:m
                 U[k,r], U[row_pivot_index,r] = U[row_pivot_index,r], U[k,r]
             end               
             
             # interchange entries `row_pivot_index` and k in P
             P[k],P[row_pivot_index] = P[row_pivot_index],P[k]
-            #temp=P[k];
-            #P[k]=P[row_pivot_index];
-            #P[row_pivot_index]=temp;
 
             # swap columns corresponding to the row operations already done.
             # NOTE: there is nothing to do if k<2.
-            #for r=1:k-1
-            #    container_for_swap = Lent[k,r]
-            #    Lent[k,r] = Lent[row_pivot_index,r] 
-            #    Lent[row_pivot_index,r] = Lent[k,r]
-            #end
             swap_prefix_of_row!(Lent, k, row_pivot_index)
         end
         
-        max_val = Inf
+        min_val = Inf
 
         # Note to self: with Julia, the optimal thing to do is split up the row operations and write a for loop.
         # The entries left of the k-th column are zero, so skip these.
         ## Cache the values of L[j,k] first.
-        #     
-        if iszero(U[k,k]) continue end # We have already pivoted so that abs(U[k,k]) is maximal.
+        #
+        if iszero(U[k,k]) continue end 
 
         container_for_inv = inv(U[k,k])
         for j=k+1:n
             Hecke.mul!(L[j,k],U[j,k], container_for_inv)
         end
 
-        #j=k+1
-        #while j<= size(A,1)
-        #    zero!(U[j,k])
-        #    j += 1
-        #end
         zero_subdiagonal_of_column!(U,k)
         
         for r=k+1:m
@@ -242,16 +221,18 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
                 Hecke.mul!(container_for_product, L[j,k], U[k,r])
                 _unsafe_minus!(U[j,r], container_for_product)
                 
-                # Update the biggest valuaton element
-                if float64_valuation(U[j,r]) < max_val
-                    max_val = float64_valuation(U[j,r])
-                    max_val_index_mut[1] = j
-                    max_val_index_mut[2] = r
+                # Update the smallest valuation element
+                if float64_valuation(U[j,r]) < min_val
+                    min_val = float64_valuation(U[j,r])
+                    min_val_index_mut[1] = j
+                    min_val_index_mut[2] = r
                 end
             end
         end
-        #println("row operations performed: ",k)
     end
+
+    @assert iszero(A[P,Pcol] - L*Umat)
+    
     return QRPadicPivoted(L,Umat,P,Pcol)
 end
 
@@ -354,6 +335,12 @@ function rank(A::Hecke.MatElem{padic})
         end
     end
     return rank
+end
+
+# Returns the p-adic singular values of a matrix
+function singular_values(A::Hecke.MatElem{padic})
+    F = padic_qr(A,col_pivot=Val{true})
+    return [ F.R[i,i] for i=1:minimum(size(A)) ]
 end
 
 # stable version of nullspace for padic matrices.
@@ -561,7 +548,7 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
 
     if min_val==Inf
         # In this case, A is the zero matrix.
-        return identity_matrix(Qp, size(A)[1])
+        return EigenSpaceDec(Qp, [zero(Qp)] , [identity_matrix(Qp, size(A)[1])] )
     end
 
     scale_factor = Qp(Qp.p)^max(0,Int64(-min_val))
