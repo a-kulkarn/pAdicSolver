@@ -385,7 +385,7 @@ function nullspace(A::Hecke.MatElem{padic})
 
     m = nrows(A)
     n = ncols(A)
-    F = padic_qr(transpose(A), col_pivot=Val{true})
+    @time F = padic_qr(transpose(A), col_pivot=Val{true})
 
     col_list = Array{Int64,1}()
     for i=1:min(n,m)
@@ -589,14 +589,13 @@ const TESTFLAG=false
 function inverse_iteration!(A,shift,V)
 
     # Note: If A is not known to precision at least one, really bad things happen.
+    Qp = A.base_ring
     In = identity_matrix(A.base_ring, size(A,1))
     B = A - shift*In
     
     if rank(B) < ncols(B)
         println("Value `shift` is exact eigenvalue. `shift` = ", shift)
-        #println(nullspace(B)[1])
-        #println(B[1:2,1:2])
-        return nullspace(B)[2], shift
+        return [nullspace(B)[2]], [shift]
     end
 
     function normalize(V)
@@ -616,7 +615,7 @@ function inverse_iteration!(A,shift,V)
         println()
     end
     
-    for i=1:A.base_ring.prec_max
+    for i=1:(A.base_ring.prec_max)
         V = normalize(pow*V)
         if TESTFLAG
             println(V)
@@ -630,13 +629,40 @@ function inverse_iteration!(A,shift,V)
     end
 
     # Test for convergence and calculate eigenvalues,
-    try
-        X = rectangular_solve(V, A*V, stable=true)
-         return V, trace(X)//size(X,2)
+    # if the algorithm hasn't converged, check for whether the remaining subspace can be
+    # split by further iteration.
+    X = try
+        rectangular_solve(V, A*V, stable=true)        
     catch e
         error("Error in inverse iteration. Likely a stability issue.")
     end
 
+    nu= trace(X)//size(X,2)
+    Y = X - nu*identity_matrix(Qp,size(X,2))
+    
+    if iszero(Y)
+        # In this case, the eigenvectors are at their maximum refinement.
+        return [V],[nu]
+    end
+
+    # Since only eigenvectors (mod p) are given as the initial data, the operator Y *must* be
+    # zero mod p. We scale out the denominator to try again.
+    
+    vals_of_Y = valuation.( Y )
+    min_val = minimum(vals_of_Y)
+
+    if minval <=0
+        error("Failure of convergence in inverse iteration.")
+    end
+
+    println("Second level iteration.")
+    scale_factor = Qp(Qp.p)^Int64(-min_val)
+    inv_scale_factor = Qp(Qp.p)^Int64(min_val)
+    Ynew = scale_factor * Y    
+    E = eigspaces(Ynew)
+
+    return Array{typeof(V),1}([V*Esp for Esp in E.spaces]),
+    Array{padic,1}([inv_scale_factor*nu for nu in E.values])
 end
 
 # Given an approximate subspace to an invariant subspace, return the
@@ -646,8 +672,8 @@ end
 #
 function inverse_iteration(A, shift, v)
     w = deepcopy(v)
-    w,nu = inverse_iteration!(A,shift,w)    
-    return w,nu
+    wlist,nulist = inverse_iteration!(A,shift,w)    
+    return wlist,nulist
 end
 
 
@@ -661,6 +687,10 @@ Compute the eigenvectors of a padic matrix iteratively.
 """
 
 function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
+
+    # Right now, we don't carry around enough data (i.e, the invariant subspaces) to distinguish if
+    # points live in totally ramified extensions.
+    println("WARNING: things will go horribly wrong if there are points over ramified extensions.")
     
     if size(A)[1] != size(A)[2]
         error("Input matrix must be square.")
@@ -684,13 +714,16 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
     Amp = modp.(Aint)
     E = eigspaces(Amp)
 
-    values_lift = fill(zero(Qp), length(E.values))
-    spaces_lift = fill(zero(parent(A)), length(E.values))
+    values_lift = fill(zero(Qp), 0)
+    spaces_lift = fill(zero(parent(A)), 0)
 
     for i in 1:length(E.values)
-        w,nu = inverse_iteration(A, Qp(lift( E.values[i])), matrix(Qp, lift(E.spaces[i])))
-        values_lift[i] = nu
-        spaces_lift[i] = w
+        appx_eval = Qp( lift(E.values[i]) )
+        appx_espace =  matrix(Qp, lift(E.spaces[i]) )
+        
+        wlist,nulist = inverse_iteration(A, appx_eval, appx_espace)
+        values_lift = vcat(values_lift,nulist)
+        spaces_lift = vcat(spaces_lift, wlist)
     end
     
     return EigenSpaceDec(Qp, values_lift, spaces_lift)

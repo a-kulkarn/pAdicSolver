@@ -51,19 +51,19 @@ function normalized_simultaneous_eigenvalues(
     
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     #
-    # NOTE: right now eigvecs returns the invariant subspaces
-    invariant_subspaces  = eigspaces(Mg)
+    # NOTE: right now eigvecs sometimes returns an invariant subspace instead.
+    eigen_subspaces  = eigspaces(Mg)
     
     #println("eigvalues: ", invariant_subspaces.values)
     #println()
     #println("eigspaces: ", length(invariant_subspaces.spaces))
 
 
-    X = matrix( Qp, fill(zero(Qp), length(invariant_subspaces.spaces) ,length(M)))
+    X = matrix( Qp, fill(zero(Qp), length(eigen_subspaces.spaces) ,length(M)))
     for j in 1:length(M)
-        for i in 1:length(invariant_subspaces.spaces)
+        for i in 1:length(eigen_subspaces.spaces)
             
-            V = invariant_subspaces.spaces[i]
+            V = eigen_subspaces.spaces[i]
             Y = rectangular_solve(V,I0*M[j]*V)           
             X[i,j] = trace(Y)/Qp(size(Y,2))
         end
@@ -82,11 +82,10 @@ function normalized_simultaneous_eigenvalues(
                     println()
                     
                     Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
-                    scale_factor=Qp(1)
                 else
                     Sol[i,:] *= inv(scale_factor)
+                    i+=1
                 end
-                i+=1
             end
         #else
             # do nothing otherwise, for now.

@@ -20,7 +20,7 @@ end
 # The critical case is p=89.
 
 # At high precision there are stubborn convergence problems...
-p = 103
+p = 109
 Qp = PadicField(p,20)
 function Base.zero(X::Type{padic})
     return Qp(0)
