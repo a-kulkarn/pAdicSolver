@@ -62,39 +62,10 @@ function normalized_simultaneous_eigenvalues(
     X = matrix( Qp, fill(zero(Qp), length(invariant_subspaces.spaces) ,length(M)))
     for j in 1:length(M)
         for i in 1:length(invariant_subspaces.spaces)
-            V = invariant_subspaces.spaces[i]
             
-            #This is spaghetti code. The best things to do is merge the branches.
-            if size(V,2) == 1
-                boo, v = iseigenvector(I0*M[j], V)
-            else
-                #println("Large invariant subspace of dimension: ", size(V,2))
-                Y = rectangular_solve(V,I0*M[j]*V)
-
-                #println()
-                #println(trace(Y))
-                #println()
-                
-                v = trace(Y)/Qp(size(Y,2))
-                boo = true
-            end
-
-            if !boo
-                println("-------------------------")
-                println("Error data:")
-                println("subspace dimension: ",  size(V,2))
-                println()
-
-                println("Valuations: ", minimum(valuation.(M0)), " ", minimum(valuation.(Mg)))
-                println()
-
-                println(Mg[1:5,1:5])
-                #println(v)
-                println()
-                              
-                error("Eigenvector not computed correctly.")
-            end
-            X[i,j] = v
+            V = invariant_subspaces.spaces[i]
+            Y = rectangular_solve(V,I0*M[j]*V)           
+            X[i,j] = trace(Y)/Qp(size(Y,2))
         end
     end
 

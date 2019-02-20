@@ -3,6 +3,15 @@
         - using Hecke
         - # Needs the new matrix utilities as well.
         - 
+        - # simple function to invert a permutation array.
+        - function inverse_permutation(A::Array{Int64,1})
+        -     Pinv = fill(0,length(A))
+    18080     for i=1:length(A)
+        0         Pinv[A[i]] = i
+        -     end
+        0     return Pinv
+        - end
+        - 
         - ##############################################################################################
         - #                                                                                            #
         - #                          Basic extension to padic numbers                                  #
@@ -42,8 +51,8 @@
         - end
         - 
         - function modp(x::padic)
-        -     Fp = ResidueRing(FlintZZ,parent(x).p)
-        -     return Fp(lift(x))
+   804864     Fp = ResidueRing(FlintZZ,parent(x).p)
+        0     return Fp(lift(x))
         - end
         - 
         - ## Test utilities
@@ -55,15 +64,21 @@
         - function rand(Qp::FlintPadicField)
         -     p = Qp.p
         -     N = Qp.prec_max
-        0     return Qp(rand(1:p^N))
+        -     return Qp(rand(1:BigInt(p)^N))*Qp(p)^(rand(-N:N))
+        - end
+        - 
+        - function rand_padic_int(Qp::FlintPadicField)
+        -     p = Qp.p
+        -     N = Qp.prec_max
+        0     return Qp(rand(1:BigInt(p)^N))
         - end
         - 
         - 
-        - function random_test_matrix(Qp)
-        -     A = matrix(Qp, fill(zero(Qp),4,4))
-        -     for i=1:4
-        -         for j=1:4
-        -             A[i,j] = rand(Qp)
+        - function random_test_matrix(Qp,n=4)
+        -     A = matrix(Qp, fill(zero(Qp),n,n))
+        -     for i=1:n
+        -         for j=1:n
+        -             A[i,j] = rand_padic_int(Qp)
         -         end
         -     end
         -     return A
@@ -95,7 +110,7 @@
         -     N = Qp.prec_max
         -     
         -     f_int = lift(f)
-        -     H = factor_mod_pk_init(fint,Qp.p)
+        -     H = factor_mod_pk_init(f_int,Qp.p)
         -     D = factor_mod_pk(H,N)
         - 
         -     return Dict( QpX(lift(k))=>D[k] for k in keys(D))   
@@ -115,7 +130,7 @@
         - # with pivoting.
         - 
         - struct QRPadicPivoted
-    37112     Q::Hecke.Generic.MatElem{padic}
+    42216     Q::Hecke.Generic.MatElem{padic}
         -     R::Hecke.Generic.MatElem{padic}
         -     p::Array{Int64,1}
         -     q::Array{Int64,1}
@@ -134,14 +149,12 @@
         -     U = Umat.entries
         -     
         -     P= Array(1:n)
-        -     Pcol=Array(1:size(A,2))
-        -     #identity_matrix(A.base_ring,n)
+        -     Pcol=Array(1:m)
         - 
         -     # We cache the maximum value of the matrix at each step, so we save an iteration pass
         -     # through the matrix.
-        -     norm_list = abs.(U[1:n,1:m])
-        0     max_val, max_val_index = findmax( norm_list );
-        - 
+        -     val_list = float64_valuation.(U)
+        0     min_val, min_val_index = findmin( val_list );
         -     
         -     # Allocate specific working memory for multiplications.
         -     container_for_swap = padic(U[1,1].N)
@@ -149,7 +162,7 @@
         -     container_for_div = padic(U[1,1].N)
         -     
         -     # Allocate a 2-element array to hold the index of the maximum valuation.
-       96     max_val_index_mut = [x for x in max_val_index.I]
+     6432     min_val_index_mut = [x for x in min_val_index.I]
         - 
         -     # Allocate a function to zero consecutive entries of a column
         0     function zero_subdiagonal_of_column!(U,k::Int64)
@@ -162,11 +175,7 @@
         0     for k=1:(min(n,m)::Int64)
         - 
         0         if col_pivot==Val{true}
-        -             #norm_list = abs.(U[k:n,k:size(A,2)])
-        -             #maxn, m = findmax( norm_list );
-        -             #println("max found")
-        -             
-        -             col_index=max_val_index_mut[2]
+        -             col_index=min_val_index_mut[2]
         0             if col_index!=k
         -                 # interchange columns m and k in U
         -                 temp=U[:,k];
@@ -180,54 +189,39 @@
         -             end
         -         end
         -         
-        -         norm_list = abs.(U[k:n,k])
-        0         maxn, row_pivot_index = findmax( norm_list );
-        0         if iszero(maxn) continue end
+        -         val_list = float64_valuation.(U[k:n,k])
+        0         minn, row_pivot_index = findmin( val_list );
+        0         if minn==Inf continue end
         - 
         -         row_pivot_index=row_pivot_index+k-1;
         0         if row_pivot_index!=k
+        - 
         -             # interchange rows `row_pivot_index` and `k` in U
-        -             #temp=U[k,:];
-        -             #U[k,:]=U[row_pivot_index,:];
-        -             #U[row_pivot_index,:]=temp;
         0             for r=1:m
         0                 U[k,r], U[row_pivot_index,r] = U[row_pivot_index,r], U[k,r]
         -             end               
         -             
         -             # interchange entries `row_pivot_index` and k in P
         -             P[k],P[row_pivot_index] = P[row_pivot_index],P[k]
-        -             #temp=P[k];
-        -             #P[k]=P[row_pivot_index];
-        -             #P[row_pivot_index]=temp;
         - 
         -             # swap columns corresponding to the row operations already done.
-        -             # NOTE: there is nothing to do if k<2.
-        -             #for r=1:k-1
-        -             #    container_for_swap = Lent[k,r]
-        -             #    Lent[k,r] = Lent[row_pivot_index,r] 
-        -             #    Lent[row_pivot_index,r] = Lent[k,r]
-        -             #end
         -             swap_prefix_of_row!(Lent, k, row_pivot_index)
         -         end
-        -         
-        0         max_val = Inf
+        - 
+        -         # Reset min_valuation for selecting new pivot.
+        0         min_val = Inf
         - 
         -         # Note to self: with Julia, the optimal thing to do is split up the row operations and write a for loop.
         -         # The entries left of the k-th column are zero, so skip these.
         -         ## Cache the values of L[j,k] first.
-        -         #     
-        0         if iszero(U[k,k]) continue end # We have already pivoted so that abs(U[k,k]) is maximal.
+        -         #
+        0         if iszero(U[k,k]) continue end 
         - 
         0         container_for_inv = inv(U[k,k])
         0         for j=k+1:n
         0             Hecke.mul!(L[j,k],U[j,k], container_for_inv)
         -         end
         - 
-        -         #j=k+1
-        -         #while j<= size(A,1)
-        -         #    zero!(U[j,k])
-        -         #    j += 1
-        -         #end
         0         zero_subdiagonal_of_column!(U,k)
         -         
         0         for r=k+1:m
@@ -236,23 +230,24 @@
         0                 Hecke.mul!(container_for_product, L[j,k], U[k,r])
         0                 _unsafe_minus!(U[j,r], container_for_product)
         -                 
-        -                 # Update the biggest valuaton element
-        0                 if float64_valuation(U[j,r]) < max_val
-        0                     max_val = float64_valuation(U[j,r])
-        -                     max_val_index_mut[1] = j
-        0                     max_val_index_mut[2] = r
+        -                 # Update the smallest valuation element
+        0                 if float64_valuation(U[j,r]) < min_val
+        0                     min_val = float64_valuation(U[j,r])
+        -                     min_val_index_mut[1] = j
+        0                     min_val_index_mut[2] = r
         -                 end
         -             end
         -         end
-        -         #println("row operations performed: ",k)
         -     end
+        - 
+        0     @assert iszero(A[P,Pcol] - L*Umat)
+        -     
         0     return QRPadicPivoted(L,Umat,P,Pcol)
         - end
         - 
         - # The index of the diagonal point is (k,k)
         - function swap_prefix_of_row!(Lent, k::Int64, i::Int64)
         0     for r=1:(k-1)
-        -         dummy=1
         -         container_for_swap = Lent[k,r]
         -         Lent[k,r] = Lent[i,r] 
         0         Lent[i,r] = container_for_swap
@@ -263,7 +258,7 @@
         - # Performs subtraction in-place, x-> x-y 
         - function _unsafe_minus!(x::padic, y::padic)
         -     x.N = min(x.N, y.N)
-        0     ccall((:padic_sub, :libflint), Nothing,
+    14408     ccall((:padic_sub, :libflint), Nothing,
         -           (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
         -           x, x, y, parent(x))
         0     return
@@ -295,18 +290,18 @@
         - =#
         - 
         - # Try again, hope for more speed!
-        - function _unsafe_precision_stable_division!(container::padic, a::padic, b::padic)
+        - # function _unsafe_precision_stable_division!(container::padic, a::padic, b::padic)
         - 
-        -     if iszero(a) return a end
-        -     # Because the division is guarenteed to be stable, manually set the precsion.
-        -     container.N = min(a.N, b.N)
-        -     ctx = container.parent
+        - #     if iszero(a) return a end
+        - #     # Because the division is guarenteed to be stable, manually set the precsion.
+        - #     container.N = min(a.N, b.N)
+        - #     ctx = container.parent
         - 
-        -     ccall((:padic_div, :libflint), Cint,
-        -           (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
-        -           container, a, b, ctx)    
-        -     return
-        - end
+        - #     ccall((:padic_div, :libflint), Cint,
+        - #           (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
+        - #           container, a, b, ctx)    
+        - #     return
+        - # end
         - 
         - 
         - # function divexact(a::padic, b::padic)
@@ -335,63 +330,92 @@
         - #     return x
         - # end
         - 
+        - # IMPORTANT!
+        - # We deviate slightly from LinearAlgebra's SVD structure by putting a diagonal matrix for S.
+        - struct SVDPadic
+      432     U::Hecke.Generic.MatElem{padic}
+        -     S::Hecke.Generic.MatElem{padic}
+        -     Vt::Hecke.Generic.MatElem{padic}
+        -     p::Array{Int64,1}
+        -     q::Array{Int64,1}
+        - end
+        - 
+        - # A padic analogue for svd
+        - import LinearAlgebra.svd
+        - function svd(A::Hecke.Generic.MatElem{padic})
+        - 
+        0     F = padic_qr(A, col_pivot=Val{true})
+        0     G = padic_qr(transpose(F.R))
+        - 
+     8064     @assert G.p == [i for i=1:length(G.p)]
+        - 
+        0     U = deepcopy(F.Q)
+        0     S = transpose(G.R)
+        0     Vt= transpose(G.Q)
+        -     
+        0     @assert iszero( A[F.p,F.q] - U*S*Vt)
+        - 
+        0     return SVDPadic(U,S,Vt,F.p,F.q)
+        - end
+        - 
         - # stable version of nullspace for padic matrices.
         - function rank(A::Hecke.MatElem{padic})
         -     n = rows(A)
         -     m = cols(A)
-        -     F = padic_qr(A)
+   926466     F = padic_qr(A)
         - 
         -     rank=0
-        -     for i=1:min(n,m)
-        -         if !iszero(F.R[i,i])
-        -             rank += 1
+        0     for i=1:min(n,m)
+        0         if !iszero(F.R[i,i])
+        0             rank += 1
         -         end
         -     end
-        -     return rank
+        0     return rank
+        - end
+        - 
+        - # Returns the p-adic singular values of a matrix
+        - function singular_values(A::Hecke.MatElem{padic})
+        0     F = padic_qr(A,col_pivot=Val{true})
+      160     return [ F.R[i,i] for i=1:minimum(size(A)) ]
         - end
         - 
         - # stable version of nullspace for padic matrices.
-        - # TODO: pivoting strategy in padic_qr does not provide the correct guarantees for this
-        - # algorithm. I should implement a full-pivoted version.
         - import Hecke.nullspace
         - function nullspace(A::Hecke.MatElem{padic})
         - 
         -     m = rows(A)
         -     n = cols(A)
-        -     F = padic_qr(transpose(A), col_pivot=Val{true})
+        0     F = padic_qr(transpose(A), col_pivot=Val{true})
         - 
         -     col_list = Array{Int64,1}()
-        -     for i=1:min(n,m)
-        -         if iszero(F.R[i,:])
-        -             push!(col_list, i)
+      800     for i=1:min(n,m)
+        0         if iszero(F.R[i,:])
+        0             push!(col_list, i)
         -         end
         -     end
         - 
-        -     Pinv = fill(0,length(F.p))
-        -     for i=1:length(F.p)
-        -         Pinv[F.p[i]] = i
-        -     end
+        0     Pinv = inverse_permutation(F.p)   
         -     
         -     Q = F.Q
-        -     inv_unit_lower_triangular!(Q)
-        -     Qinvt = transpose(Q)[Pinv,:]
+        0     inv_unit_lower_triangular!(Q)
+        0     Qinvt = transpose(Q)[Pinv,:]
         -     
-        -     return length(col_list) + max(0,n-m), hcat(Qinvt[:, col_list], Qinvt[:,(m+1):n])
+      464     return length(col_list) + max(0,n-m), hcat(Qinvt[:, col_list], Qinvt[:,(m+1):n])
         - end
         - 
         - function inv_unit_lower_triangular!(L)
         -     m = size(L,1)
         -     n = size(L,2)
-        -     if n != m
-        -         error("Square matrix required for inverse")
+  1587193     if n != m
+        0         error("Square matrix required for inverse")
         -     end
         - 
-        -     for k = 1:n
-        -         for i = k+1:n
-        -             L[i, k] = -(L[i:i, k:i-1] * L[k:i-1, k:k])[1,1]
+        0     for k = 1:n
+        0         for i = k+1:n
+        0             L[i, k] = -(L[i:i, k:i-1] * L[k:i-1, k:k])[1,1]
         -         end
         -     end
-        -     return
+        0     return
         - end
         - 
         - function inv_unit_lower_triangular(L)
@@ -405,69 +429,150 @@
         - # a slightly generalized version of solve
         - # If A,b have different precisions, some strange things happen.
         - # TODO: honestly, just call this solve.
-        - function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+        - #
+        - # Parameter `stable` determines whether qr or svd method is used. Default is for qr (speed).
+        - #
+        - function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic}; stable=false)
+    33104     if !stable
+        0         return _lu_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+        -     else
+        0         return _svd_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+        -     end
+        - end
+        - 
+        - # Specialization to lu-solve
+        - function _lu_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
         - 
         -     m = rows(A)
         -     n = cols(A)
-        -     if rows(b_input) != m
-        -         error("`A` and `b` must have the same number of rows.")
+  5669590     if rows(b_input) != m
+        0         error("`A` and `b` must have the same number of rows.")
         -     end
         -     b = deepcopy(b_input)
         - 
-        -     if m < n
-        -         error("Underdetermined systems not yet supported.")
+        0     if m < n
+        0         error("System is underdetermined. Use `underdetermined_solve` instead.")
         -     end
         - 
-        -     F = padic_qr(A)
-        -     b = b[F.p,:]
+        0     F = padic_qr(A)
+        0     b = b[F.p,:]
         - 
         -     # forward substitution, all diag entries are scaled to 1
-        -     for i in 1:m
-        -         for j in 1:(i-1)
-        -             #scale = A[i, j]
-        -             #b.zip_row_op(i, j, lambda x, y: x - y * scale)
-        -             b[i,:] = b[i,:] - b[j,:]* F.Q[i,j]
+        0     for i in 1:m
+        0         for j in 1:(i-1)
+        0             b[i,:] = b[i,:] - b[j,:]* F.Q[i,j]
         -         end
         -     end
         - 
         -     # consistency check for overdetermined systems
-        -     if m > n
-        -         for i in (n+1):m
-        -             for j in 1:cols(b)
-        -                 if !iszero(b[i, j])
-        -                     println(b)
-        -                     error("The system is inconsistent.")
+        0     if m > n
+        0         for i in (n+1):m
+        0             for j in 1:cols(b)
+        0                 if !iszero(b[i, j])
+        0                     println()
+        0                     println("--- Error data: ---")
+        0                     println("bad entry at ", i," ",j)
+        0                     println("entries: ",b[i,j])
+        0                     println()
+        0                     error("Line 461: The system is inconsistent.")
         -                 end
         -             end
         -         end
         -     end
-        -     b = b[1:n, :]   # truncate zero rows if consistent
+        0     b = b[1:n, :]   # truncate zero rows if consistent
         - 
         -     # backward substitution
-        -     #for i in range(n - 1, -1, -1):  # original python
-        - 
-        -     for i in n:-1:1
-        -         for j in (i+1):n
-        -             #scale = A[i, j]
-        -             #b.zip_row_op(i, j, lambda x, y: x - y * scale)
-        -             b[i,:] = b[i,:] - b[j,:]*F.R[i,j]
+        0     for i in n:-1:1
+        0         for j in (i+1):n
+        0             b[i,:] = b[i,:] - b[j,:]*F.R[i,j]
         -         end
         -         #scale = A[i, i]
         -         #b.row_op(i, lambda x, _: x / scale)
         - 
-        -         if !iszero(b[i,:]) && iszero(F.R[i,i])
-        -             println(b)
-        -             println()
-        -             println(F.R)
-        -             error("The system is inconsistent.")
-        -         elseif !iszero(F.R[i,i])
-        -             b[i,:] *= inv(F.R[i,i])
+        0         if !iszero(b[i,:]) && iszero(F.R[i,i])
+        0             println()
+        0             println("--- Error data: ---")
+        0             println("bad entry at ", i," ",j)
+        0             error("Line 480: The system is inconsistent.")
+        0         elseif !iszero(F.R[i,i])
+        0             b[i,:] *= inv(F.R[i,i])
         -         end
         -     end
         - 
-        -     return b
+        0     return b
         - end
         - 
+        - # Specialization to svd-solve
+        - function _svd_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+        - 
+        -     m = rows(A)
+        -     n = cols(A)
+        0     if rows(b_input) != m
+        0         error("`A` and `b` must have the same number of rows.")
+        -     end
+        -     b = deepcopy(b_input)
+        - 
+        0     if m < n
+        0         error("System is underdetermined. Use `underdetermined_solve` instead.")
+        -     end
+        - 
+        0     F = svd(A)
+        0     b = b[F.p,:]
+        - 
+        -     # forward substitution, all diag entries are scaled to 1
+        0     for i in 1:m
+        0         for j in 1:(i-1)
+        0             b[i,:] = b[i,:] - b[j,:]* F.U[i,j]
+        -         end
+        -     end
+        - 
+        -     # consistency check for overdetermined systems
+        0     if m > n
+        0         for i in (n+1):m
+        0             for j in 1:cols(b)
+        0                 if !iszero(b[i, j])
+        0                     println()
+        0                     println("--- Error data: ---")
+        0                     println("bad entry at ", i," ",j)
+        0                     error("Line 533: The system is inconsistent.")
+        -                 end
+        -             end
+        -         end
+        -     end
+        0     b = b[1:n, :]   # truncate zero rows if consistent
+        - 
+        -     # Scaling step
+        0     for i in 1:n
+        0         if !iszero(b[i,:]) && iszero(F.S[i,i])
+        0             println()
+        0             println("--- Error data: ---")
+        0             error("The system is inconsistent: singular value: ", i," is zero, while `b[i,:]` is nonzero.")
+        0         elseif !iszero(F.S[i,i])
+        0             b[i,:] *= inv(F.S[i,i])
+        -         end
+        -     end
+        - 
+        -     # backward substitution
+        0     for i in n:-1:1
+        0         for j in (i+1):n
+        0             b[i,:] = b[i,:] - b[j,:]*F.Vt[i,j]
+        -         end
+        -     end
+        - 
+        0     return b[F.q,:]
+        - end
+        -     
+        - function underdetermined_solve()
+        -     error("Not implemented.")
+        -     return
+        - end
+        - 
+        - 
+        - #************************************************************
+        - #
+        - # Eigenvector iteration methods.
+        - #
+        - #************************************************************
         - 
         - # Solve for an eigenvector using inverse iteration.
         - # Note that the algorithm will not converge to a particular vector in general, but the norm of
@@ -476,24 +581,28 @@
         - #
         - # TODO: I should really optimize and stabilize this later
         - const TESTFLAG=false
-        - function inverse_iteration!(A,shift,v)
-        -     In = identity_matrix(A.base_ring, size(A,1))
-        -     B = A - shift*In
+        - function inverse_iteration!(A,shift,V)
+        - 
+        -     # Note: If A is not known to precision at least one, really bad things happen.
+        0     In = identity_matrix(A.base_ring, size(A,1))
+        0     B = A - shift*In
         -     
-        -     if rank(B) < cols(B)
-        -         println("Value `shift` is exact eigenvalue.")
-        -         return nullspace(B)[2]
+        0     if rank(B) < cols(B)
+        0         println("Value `shift` is exact eigenvalue. `shift` = ", shift)
+        -         #println(nullspace(B)[1])
+        -         #println(B[1:2,1:2])
+        0         return nullspace(B)[2]
         -     end
         - 
-        -     function normalize(v)
-        -         maxn, m = findmax( abs.(v.entries) )
-        -         if iszero(maxn)
-        -             return v
+        0     function normalize(V)
+        -         maxn, m = findmax( abs.(V.entries) )
+        0         if iszero(maxn)
+        0             return V
         -         end
-        -         return v / v[m]
+        0         return V / V[m]
         -     end
         -     
-        -     pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)))
+        0     pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)),stable=true)
         - 
         -     if TESTFLAG
         -         println("---pow---")
@@ -502,26 +611,50 @@
         -         println()
         -     end
         -     
-        -     for i=1:10
-        -         v = normalize(pow*v)
+      576     for i=1:A.base_ring.prec_max+10
+        0         V = normalize(pow*V)
         -         if TESTFLAG
-        -             println(v)
-        -             println()
+        -             println(V)
+    11232             println()
         -         end
         -     end
-        - 
-        -     if TESTFLAG
+        -     
+        0     if TESTFLAG
         -         println("---end inv iteration---")
         -         println()
         -     end
+        - 
+        -     # Test for convergence and calculate eigenvalues,
+        -     # This is broken for larger invariant subspaces.
+        -     #X = rectangular_solve(V,A*V, stable=false)
+        - 
+        0     if size(V,2)==1
+        -         #return V, X[1,1]
+        0         boo, nu = iseigenvector(A,V)
+      432         return V, nu
+        -     else
+        0         error("Not implemented.")
+        -     end
         -     
-        -     return v
+        -     # if !boo || typeof(nu) == String
+        -     #     println("-------error data-------")
+        -     #     println(nu)
+        -     #     error("Failure of convergence in inverse iteration. Likely a stability issue.")
+        -     # end
+        - 
+        -     
+        -     return V, trace(V)//size(V,2)
         - end
         - 
+        - # Given an approximate subspace to an invariant subspace, return the
+        - # invariant subspace and the eigenvalue.
+        - #
+        - # Raises an error if there is a failure of convergence.
+        - #
         - function inverse_iteration(A, shift, v)
         -     w = deepcopy(v)
-        -     w = inverse_iteration!(A,shift,w)
-        -     return w
+   458645     w,nu = inverse_iteration!(A,shift,w)    
+      288     return w,nu
         - end
         - 
         - 
@@ -532,13 +665,12 @@
         - 
         - Compute the eigenvectors of a padic matrix iteratively.
         - 
-        - NOTE: I should write a corresponding eigen function.
         - """
         - 
         - function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
         -     
-        -     if size(A)[1] != size(A)[2]
-        -         error("Input matrix must be square.")
+   285136     if size(A)[1] != size(A)[2]
+        0         error("Input matrix must be square.")
         -     end
         -     
         -     Qp = A.base_ring
@@ -547,70 +679,30 @@
         -     vals_of_A = valuation.( A.entries )
         -     min_val = minimum(vals_of_A)
         - 
-        -     if min_val==Inf
+  2063226     if min_val==Inf
         -         # In this case, A is the zero matrix.
-        -         return identity_matrix(Qp, size(A)[1])
+        0         return EigenSpaceDec(Qp, [zero(Qp)] , [identity_matrix(Qp, size(A)[1])] )
         -     end
         - 
-        -     scale_factor = Qp(Qp.p)^max(0,Int64(-min_val))
-        -     Aint = scale_factor * A
+        0     scale_factor = Qp(Qp.p)^max(0,Int64(-min_val))
+        0     Aint = scale_factor * A
         -     
         -     # Solve the problem modulo p
-        -     Amp = modp.(Aint)
-        -     E = eigspaces(Amp)
+   325372     Amp = modp.(Aint)
+        0     E = eigspaces(Amp)
         - 
-        -     values_lift = fill(zero(Qp), length(E.values))
-        -     spaces_lift = fill(zero(parent(A)), length(E.values))
-        -     for i in 1:length(E.values)
+   124941     values_lift = fill(zero(Qp), length(E.values))
+        0     spaces_lift = fill(zero(parent(A)), length(E.values))
         - 
-        -         w = inverse_iteration(A, Qp(lift( E.values[i])), matrix(Qp, lift(E.spaces[i])))
-        -         
-        -         boo, nu = iseigenvector(A,w[:,1])
-        -         if !boo || typeof(nu) == String
-        -             println("-------error data-------")
-        -             println(nu)            
-        -             error("Failure of convergence in inverse iteration. Likely a stability issue.")
-        -         end
-        - 
-        -         values_lift[i] = nu
-        -         spaces_lift[i] = w
-        - 
+      912     for i in 1:length(E.values)
+    37391         w,nu = inverse_iteration(A, Qp(lift( E.values[i])), matrix(Qp, lift(E.spaces[i])))
+        0         values_lift[i] = nu
+     1616         spaces_lift[i] = w
         -     end
         -     
-        -     return EigenSpaceDec(Qp, values_lift, spaces_lift)
+        0     return EigenSpaceDec(Qp, values_lift, spaces_lift)
         - end
         - 
-        - 
-        - 
-        - # function eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
-        - 
-        - #     if size(A)[1] != size(A)[2]
-        - #         error("Input matrix must be square.")
-        - #     end
-        -     
-        - #     Qp = A.base_ring
-        -     
-        - #     # First, make everything in A a p-adic integer
-        - #     vals_of_A = valuation.( A.entries )
-        - #     min_val = minimum(vals_of_A)
-        - 
-        - #     if min_val==Inf
-        - #         # In this case, A is the zero matrix.
-        - #         return identity_matrix(Qp, size(A)[1])
-        - #     end
-        - 
-        - #     scale_factor = Qp(Qp.p)^Int64(min(0,-min_val))
-        - #     Aint = scale_factor * A
-        -     
-        - #     # Solve the problem modulo p
-        - #     Amp = broadcast(modp, Aint)
-        - #     E = eigen(Amp)
-        - #     eig_pairs = [ (E.values[i], E.vectors[:,i]) for i in 1:size(E.values)[1]]
-        -     
-        - #     println("Assuming that the roots of the characteristic polynomial modulo p are all distinct")
-        - 
-        - #     return  hcat([ inverse_iteration(A, Qp(lift(e)), matrix(Qp,lift(v))) for (e,v) in eig_pairs]...)
-        - # end
         - 
         - 
         - # function for testing
@@ -621,21 +713,21 @@
         - """
         - function iseigenvector(A,v)
         -     i=1
-        -     while i<=size(v,1)
-        -         if !iszero(v[i,1])
+  1128180     while i<=size(v,1)
+        0         if !iszero(v[i,1])
         -             break
         -         end
         -         i+=1
         -     end
-        -     if i>size(v,1)
-        -         return false, "zero"
+        0     if i>size(v,1)
+        0         return false, "zero"
         -     end
-        -     e = (A*v)[i,1]/v[i,1]
+        0     e = (A*v)[i,1]/v[i,1]
         - 
-        -     if iszero(A*v - (A*v)[i,1]/v[i,1]*v)
-        -         return true,e
+        0     if iszero(A*v - (A*v)[i,1]/v[i,1]*v)
+     1152         return true,e
         -     else
-        -         return false, A*v - (A*v)[i,1]/v[i,1]*v
+        0         return false, A*v - (A*v)[i,1]/v[i,1]*v
         -     end
         - end
         - 
@@ -653,6 +745,4 @@
         -     return U*inv(P)*L + eI, Q*inv(P)*L
         - end
         - 
-        - 
-        - println("padic_util 'Package' loaded!")
         - 

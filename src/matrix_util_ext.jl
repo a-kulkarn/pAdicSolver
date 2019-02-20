@@ -126,9 +126,9 @@ function Base.setindex!(A::Hecke.Generic.Mat{T} where T, x, I::CartesianIndex{2}
 end
 
 # In theory this works, but the matrix never ends up with the right shape.
-function Base.iterate(A::Hecke.Generic.Mat{T}, state=1) where T
-    return iterate(A.entries, state)
-end
+#function Base.iterate(A::Hecke.Generic.Mat{T}, state=1) where T
+#    return iterate(A.entries, state)
+#end
 
 function Base.collect(A::Hecke.Generic.Mat{T}, state=1) where T
     return A.entries

@@ -17,7 +17,7 @@ function rel_error(P,sol)
 end
 
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
-Qp = PadicField(491,10)
+Qp = PadicField(491,30)
 function Base.zero(X::Type{padic})
     return Qp(0)
 end

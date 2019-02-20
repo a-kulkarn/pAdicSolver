@@ -336,6 +336,8 @@ struct SVDPadic
     U::Hecke.Generic.MatElem{padic}
     S::Hecke.Generic.MatElem{padic}
     Vt::Hecke.Generic.MatElem{padic}
+    p::Array{Int64,1}
+    q::Array{Int64,1}
 end
 
 # A padic analogue for svd
@@ -347,19 +349,19 @@ function svd(A::Hecke.Generic.MatElem{padic})
 
     @assert G.p == [i for i=1:length(G.p)]
 
-    U = deepcopy(F.Q)[inverse_permutation(F.p),:]
-    S = deepcopy(G.R)
-    Vt= transpose(G.Q)[:,inverse_permutation(F.q)]
+    U = deepcopy(F.Q)
+    S = transpose(G.R)
+    Vt= transpose(G.Q)
+    
+    @assert iszero( A[F.p,F.q] - U*S*Vt)
 
-    @assert iszero( A - U*S*Vt)
-
-    return SVDPadic(U,S,Vt)
+    return SVDPadic(U,S,Vt,F.p,F.q)
 end
 
 # stable version of nullspace for padic matrices.
 function rank(A::Hecke.MatElem{padic})
-    n = rows(A)
-    m = cols(A)
+    n = nrows(A)
+    m = ncols(A)
     F = padic_qr(A)
 
     rank=0
@@ -378,13 +380,11 @@ function singular_values(A::Hecke.MatElem{padic})
 end
 
 # stable version of nullspace for padic matrices.
-# TODO: pivoting strategy in padic_qr does not provide the correct guarantees for this
-# algorithm. I should implement a full-pivoted version.
 import Hecke.nullspace
 function nullspace(A::Hecke.MatElem{padic})
 
-    m = rows(A)
-    n = cols(A)
+    m = nrows(A)
+    n = ncols(A)
     F = padic_qr(transpose(A), col_pivot=Val{true})
 
     col_list = Array{Int64,1}()
@@ -429,17 +429,29 @@ end
 # a slightly generalized version of solve
 # If A,b have different precisions, some strange things happen.
 # TODO: honestly, just call this solve.
-function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+#
+# Parameter `stable` determines whether qr or svd method is used. Default is for qr (speed).
+#
+function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic}; stable=false)
+    if !stable
+        return _lu_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+    else
+        return _svd_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+    end
+end
 
-    m = rows(A)
-    n = cols(A)
-    if rows(b_input) != m
+# Specialization to lu-solve
+function _lu_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+
+    m = nrows(A)
+    n = ncols(A)
+    if nrows(b_input) != m
         error("`A` and `b` must have the same number of rows.")
     end
     b = deepcopy(b_input)
 
     if m < n
-        error("Underdetermined systems not yet supported.")
+        error("System is underdetermined. Use `underdetermined_solve` instead.")
     end
 
     F = padic_qr(A)
@@ -448,8 +460,6 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
     # forward substitution, all diag entries are scaled to 1
     for i in 1:m
         for j in 1:(i-1)
-            #scale = A[i, j]
-            #b.zip_row_op(i, j, lambda x, y: x - y * scale)
             b[i,:] = b[i,:] - b[j,:]* F.Q[i,j]
         end
     end
@@ -457,12 +467,14 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
     # consistency check for overdetermined systems
     if m > n
         for i in (n+1):m
-            for j in 1:cols(b)
+            for j in 1:ncols(b)
                 if !iszero(b[i, j])
-                    #println(b)
-                    #println()
+                    println()
+                    println("--- Error data: ---")
                     println("bad entry at ", i," ",j)
-                    error("The system is inconsistent.")
+                    println("entries: ", b[i,j])
+                    println()
+                    error("Line 461: The system is inconsistent.")
                 end
             end
         end
@@ -470,22 +482,18 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
     b = b[1:n, :]   # truncate zero rows if consistent
 
     # backward substitution
-    #for i in range(n - 1, -1, -1):  # original python
-
     for i in n:-1:1
         for j in (i+1):n
-            #scale = A[i, j]
-            #b.zip_row_op(i, j, lambda x, y: x - y * scale)
             b[i,:] = b[i,:] - b[j,:]*F.R[i,j]
         end
         #scale = A[i, i]
         #b.row_op(i, lambda x, _: x / scale)
 
         if !iszero(b[i,:]) && iszero(F.R[i,i])
-            #println(b)
-            #println()
-            #println(F.R)
-            error("The system is inconsistent.")
+            println()
+            println("--- Error data: ---")
+            println("bad entry at ", i," ",j)
+            error("Line 480: The system is inconsistent.")
         elseif !iszero(F.R[i,i])
             b[i,:] *= inv(F.R[i,i])
         end
@@ -494,36 +502,112 @@ function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic
     return b
 end
 
+# Specialization to svd-solve
+function _svd_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
+
+    m = nrows(A)
+    n = ncols(A)
+    if nrows(b_input) != m
+        error("`A` and `b` must have the same number of rows.")
+    end
+    b = deepcopy(b_input)
+
+    if m < n
+        error("System is underdetermined. Use `underdetermined_solve` instead.")
+    end
+
+    F = svd(A)
+    b = b[F.p,:]
+
+    # forward substitution, all diag entries are scaled to 1
+    for i in 1:m
+        for j in 1:(i-1)
+            b[i,:] = b[i,:] - b[j,:]* F.U[i,j]
+        end
+    end
+
+    # consistency check for overdetermined systems
+    if m > n
+        for i in (n+1):m
+            for j in 1:ncols(b)
+                if !iszero(b[i, j])
+                    println()
+                    println("--- Error data: ---")
+                    println("bad entry at ", i," ",j)
+                    println("entries: ", b[i,j])
+                    # println()
+                    # println(b)
+                    # println()
+                    # println(A)
+                    error("Line 533: The system is inconsistent.")
+                end
+            end
+        end
+    end
+    b = b[1:n, :]   # truncate zero rows if consistent
+
+    # Scaling step
+    for i in 1:n
+        if !iszero(b[i,:]) && iszero(F.S[i,i])
+            println()
+            println("--- Error data: ---")
+            error("The system is inconsistent: singular value: ", i," is zero, while `b[i,:]` is nonzero.")
+        elseif !iszero(F.S[i,i])
+            b[i,:] *= inv(F.S[i,i])
+        end
+    end
+
+    # backward substitution
+    for i in n:-1:1
+        for j in (i+1):n
+            b[i,:] = b[i,:] - b[j,:]*F.Vt[i,j]
+        end
+    end
+
+    return b[F.q,:]
+end
+    
+function underdetermined_solve()
+    error("Not implemented.")
+    return
+end
+
+
+#************************************************************
+#
+# Eigenvector iteration methods.
+#
+#************************************************************
 
 # Solve for an eigenvector using inverse iteration.
 # Note that the algorithm will not converge to a particular vector in general, but the norm of
 #
 # A*w - λ*w converges to zero. Here, λ is the unique eigenvalue closest to `shift`, (if it is unique).
 #
-# TODO: I should really optimize and stabilize this later
+# TODO: Separate invariant subspaces at high valuation.
 const TESTFLAG=false
-function inverse_iteration!(A,shift,v)
+function inverse_iteration!(A,shift,V)
 
     # Note: If A is not known to precision at least one, really bad things happen.
     In = identity_matrix(A.base_ring, size(A,1))
     B = A - shift*In
     
-    if rank(B) < cols(B)
+    if rank(B) < ncols(B)
         println("Value `shift` is exact eigenvalue. `shift` = ", shift)
         #println(nullspace(B)[1])
         #println(B[1:2,1:2])
-        return nullspace(B)[2]
+        return nullspace(B)[2], shift
     end
 
-    function normalize(v)
-        maxn, m = findmax( abs.(v.entries) )
+    function normalize(V)
+        maxn, m = findmax( abs.(V.entries) )
         if iszero(maxn)
-            return v
+            return V
         end
-        return v / v[m]
+        return V / V[m]
     end
     
-    pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)))
+    pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)),stable=true)
 
     if TESTFLAG
         println("---pow---")
@@ -532,26 +616,38 @@ function inverse_iteration!(A,shift,v)
         println()
     end
     
-    for i=1:10
-        v = normalize(pow*v)
+    for i=1:A.base_ring.prec_max
+        V = normalize(pow*V)
         if TESTFLAG
-            println(v)
+            println(V)
             println()
         end
     end
-
+    
     if TESTFLAG
         println("---end inv iteration---")
         println()
     end
-    
-    return v
+
+    # Test for convergence and calculate eigenvalues,
+    try
+        X = rectangular_solve(V, A*V, stable=true)
+         return V, trace(X)//size(X,2)
+    catch e
+        error("Error in inverse iteration. Likely a stability issue.")
+    end
+
 end
 
+# Given an approximate subspace to an invariant subspace, return the
+# invariant subspace and the eigenvalue.
+#
+# Raises an error if there is a failure of convergence.
+#
 function inverse_iteration(A, shift, v)
     w = deepcopy(v)
-    w = inverse_iteration!(A,shift,w)
-    return w
+    w,nu = inverse_iteration!(A,shift,w)    
+    return w,nu
 end
 
 
@@ -562,7 +658,6 @@ eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
 
 Compute the eigenvectors of a padic matrix iteratively.
 
-NOTE: I should write a corresponding eigen function.
 """
 
 function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
@@ -591,21 +686,11 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
 
     values_lift = fill(zero(Qp), length(E.values))
     spaces_lift = fill(zero(parent(A)), length(E.values))
+
     for i in 1:length(E.values)
-
-        w = inverse_iteration(A, Qp(lift( E.values[i])), matrix(Qp, lift(E.spaces[i])))
-
-        # This is broken for larger invariant subspaces.
-        boo, nu = iseigenvector(A,w[:,1])
-        if !boo || typeof(nu) == String
-            println("-------error data-------")
-            println(nu)            
-            error("Failure of convergence in inverse iteration. Likely a stability issue.")
-        end
-
+        w,nu = inverse_iteration(A, Qp(lift( E.values[i])), matrix(Qp, lift(E.spaces[i])))
         values_lift[i] = nu
         spaces_lift[i] = w
-
     end
     
     return EigenSpaceDec(Qp, values_lift, spaces_lift)
@@ -653,5 +738,3 @@ function one_iteration(A,Q,shift)
     return U*inv(P)*L + eI, Q*inv(P)*L
 end
 
-
-println("padic_util 'Package' loaded!")

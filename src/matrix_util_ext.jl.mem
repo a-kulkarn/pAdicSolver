@@ -43,15 +43,15 @@
         -     A = find_nemo_mat(bc)
         -     
         -     # Use the data fields to create the output
-        -     if isempty(A.entries)
-        -         return similar(A.entries)
+      320     if isempty(A.entries)
+        0         return similar(A.entries)
         -     end
         -     
         -     val = bc.f(A[1,1])
         -     init = fill(val, size(A)[1], size(A)[2])
         - 
-        -     if typeof(val) <: NCRingElem
-        -         return matrix(val.parent, init)
+   800800     if typeof(val) <: NCRingElem
+        0         return matrix(val.parent, init)
         -     else
         -         return init
         -     end
@@ -85,7 +85,7 @@
         - function Base.copyto!(X::Hecke.nmod_mat, bc::bcstyle)
         -     Y = bc.args[1]
         -     X = matrix(X.base_ring, bc.f.(Y.entries))
-        -     return X
+        0     return X
         - end
         - 
         - 
@@ -114,7 +114,7 @@
         - end
         - 
         - function Base.getindex(A::Hecke.Generic.Mat{T} where T, I::Array{Int64,1}, J::Array{Int64,1})
-        -     return matrix(A.base_ring, A.entries[I,J])
+        0     return matrix(A.base_ring, A.entries[I,J])
         - end
         - 
         - function Base.getindex(A::Hecke.Generic.Mat{T} where T, I::CartesianIndex{2})
@@ -141,7 +141,7 @@
         - 
         - import Base./
         - function /(A :: Hecke.Generic.Mat{T}, x::T)  where T
-        -     return deepcopy(A) * inv(x)
+        0     return deepcopy(A) * inv(x)
         - end
         - 
         - 
@@ -164,11 +164,11 @@
         - 
         - ## Make things a little more consistent with the other Julia types
         - function my_nullspace(A :: T) where T <: Union{nmod_mat, fmpz_mat}
-        -     if iszero(A)
-        -         return size(A,2), identity_matrix(A.base_ring, size(A,2))
+        0     if iszero(A)
+        0         return size(A,2), identity_matrix(A.base_ring, size(A,2))
         -     end
-        -     nu,N = nullspace(A)
-        -     return nu, nu==0 ? matrix(A.base_ring, fill(0,size(A,2),0)) : N[:,1:nu]
+        0     nu,N = nullspace(A)
+        0     return nu, nu==0 ? matrix(A.base_ring, fill(0,size(A,2),0)) : N[:,1:nu]
         - end
         - 
         - 
@@ -187,7 +187,7 @@
         - end
         - 
         - struct EigenSpaceDec{T}
-        -     base_ring::Any
+   289672     base_ring::Any
         -     values::Array{T,1}
         -     spaces::Array{S, 1} where S <: Hecke.Generic.MatElem{T}
         - end
@@ -196,16 +196,16 @@
         - # matrices whose columns are generators for the eigen spaces.
         - function eigspaces(A::Hecke.Generic.MatElem{T}) where T
         -     R,_ = PolynomialRing(A.base_ring)
-        -     g = charpoly(R, A)
+        0     g = charpoly(R, A)
         -     rts = roots(g)
-        -     if isempty(rts)
+       48     if isempty(rts)
         -         #error("Not implemented if no roots of char. poly. over the finite field")
         -         rts = Array{T,1}()
         -     end
         -     
-        -     Imat = identity_matrix(A.base_ring, size(A,1))
+      320     Imat = identity_matrix(A.base_ring, size(A,1))
         - 
-        -     return EigenSpaceDec( A.base_ring, rts, [ my_nullspace(A-r*Imat)[2] for r in rts])
+     1152     return EigenSpaceDec( A.base_ring, rts, [ my_nullspace(A-r*Imat)[2] for r in rts])
         - end
         -     
         - # Returns an eigen factorization structure like the default LinearAlgebra.eigen function.
