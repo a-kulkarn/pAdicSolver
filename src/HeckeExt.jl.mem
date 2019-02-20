@@ -1,4 +1,4 @@
-168299404 module HeckeExt
+168401089 module HeckeExt
         - 
         - export broadcast, iterate, collect, matrix, rectangular_solve, my_nullspace, eigen, eigvecs, eigspaces, charpoly, MyEigen
         - 

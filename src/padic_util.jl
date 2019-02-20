@@ -178,9 +178,9 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
             col_index=min_val_index_mut[2]
             if col_index!=k
                 # interchange columns m and k in U
-                temp=U[:,k];
-                U[:,k]=U[:,col_index];
-                U[:,col_index]=temp;
+                for r=1:n
+                    U[r,k], U[r,col_index] = U[r,col_index], U[r,k]
+                end
                 
                 # interchange entries m and k in Pcol
                 temp=Pcol[k];
@@ -385,7 +385,7 @@ function nullspace(A::Hecke.MatElem{padic})
 
     m = nrows(A)
     n = ncols(A)
-    @time F = padic_qr(transpose(A), col_pivot=Val{true})
+    F = padic_qr(transpose(A), col_pivot=Val{true})
 
     col_list = Array{Int64,1}()
     for i=1:min(n,m)
@@ -403,18 +403,28 @@ function nullspace(A::Hecke.MatElem{padic})
     return length(col_list) + max(0,n-m), hcat(Qinvt[:, col_list], Qinvt[:,(m+1):n])
 end
 
-function inv_unit_lower_triangular!(L)
-    m = size(L,1)
-    n = size(L,2)
-    if n != m
-        error("Square matrix required for inverse")
-    end
+function inv_unit_lower_triangular!(L::Hecke.Generic.MatElem{T} where T)
 
+    m = size(L,1)::Int64
+    n = size(L,2)::Int64    
+    #if !issquare(L)
+    #    error("Square matrix required for inverse")
+    #end
+    Qp = parent(L[1,1])
+    container_for_mul = Qp()
+    container_for_result = Qp()
+    
     for k = 1:n
         for i = k+1:n
-            L[i, k] = -(L[i:i, k:i-1] * L[k:i-1, k:k])[1,1]
+            container_for_result=zero(Qp)
+            for r=k:i-1
+                Hecke.mul!(container_for_mul, L[i,r], L[r,k])
+                addeq!(container_for_result,  container_for_mul)
+            end
+            L[i,k] = -container_for_result
         end
     end
+
     return
 end
 
@@ -424,15 +434,13 @@ function inv_unit_lower_triangular(L)
     return L2
 end
 
-# Needs to be more robust. Also applied to the situation A is square but not of rank 1.
-#
-# a slightly generalized version of solve
+# A slightly generalized version of solve
 # If A,b have different precisions, some strange things happen.
 # TODO: honestly, just call this solve.
 #
 # Parameter `stable` determines whether qr or svd method is used. Default is for qr (speed).
 #
-function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic}; stable=false)
+function rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic}; stable::Bool=false)
     if !stable
         return _lu_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{padic})
     else
@@ -492,7 +500,7 @@ function _lu_rectangular_solve(A::Hecke.MatElem{padic}, b_input::Hecke.MatElem{p
         if !iszero(b[i,:]) && iszero(F.R[i,i])
             println()
             println("--- Error data: ---")
-            println("bad entry at ", i," ",j)
+            println("bad entry at row ", i)
             error("Line 480: The system is inconsistent.")
         elseif !iszero(F.R[i,i])
             b[i,:] *= inv(F.R[i,i])
@@ -651,7 +659,7 @@ function inverse_iteration!(A,shift,V)
     vals_of_Y = valuation.( Y )
     min_val = minimum(vals_of_Y)
 
-    if minval <=0
+    if min_val <=0
         error("Failure of convergence in inverse iteration.")
     end
 

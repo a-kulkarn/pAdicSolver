@@ -43,14 +43,14 @@
         -     A = find_nemo_mat(bc)
         -     
         -     # Use the data fields to create the output
-      320     if isempty(A.entries)
+      224     if isempty(A.entries)
         0         return similar(A.entries)
         -     end
         -     
         -     val = bc.f(A[1,1])
         -     init = fill(val, size(A)[1], size(A)[2])
         - 
-   800800     if typeof(val) <: NCRingElem
+   560560     if typeof(val) <: NCRingElem
         0         return matrix(val.parent, init)
         -     else
         -         return init
@@ -64,13 +64,13 @@
         -     A = find_nemo_mat(bc)
         -     
         -     # Use the data fields to create the output
-        -     if isempty(A.entries)
-        -         return similar(A.entries)
+   663152     if isempty(A.entries)
+        0         return similar(A.entries)
         -     end
         -     
-        -     val = bc.f(A[1,1])
-        -     init = fill(val, size(A)[1], size(A)[2])
-        -     return init
+        0     val = bc.f(A[1,1])
+      112     init = fill(val, size(A)[1], size(A)[2])
+        0     return init
         - end
         - 
         - 
@@ -126,9 +126,9 @@
         - end
         - 
         - # In theory this works, but the matrix never ends up with the right shape.
-        - function Base.iterate(A::Hecke.Generic.Mat{T}, state=1) where T
-        -     return iterate(A.entries, state)
-        - end
+        - #function Base.iterate(A::Hecke.Generic.Mat{T}, state=1) where T
+        - #    return iterate(A.entries, state)
+        - #end
         - 
         - function Base.collect(A::Hecke.Generic.Mat{T}, state=1) where T
         -     return A.entries
@@ -187,7 +187,7 @@
         - end
         - 
         - struct EigenSpaceDec{T}
-   289672     base_ring::Any
+   320539     base_ring::Any
         -     values::Array{T,1}
         -     spaces::Array{S, 1} where S <: Hecke.Generic.MatElem{T}
         - end
@@ -203,9 +203,9 @@
         -         rts = Array{T,1}()
         -     end
         -     
-      320     Imat = identity_matrix(A.base_ring, size(A,1))
+       80     Imat = identity_matrix(A.base_ring, size(A,1))
         - 
-     1152     return EigenSpaceDec( A.base_ring, rts, [ my_nullspace(A-r*Imat)[2] for r in rts])
+      624     return EigenSpaceDec( A.base_ring, rts, [ my_nullspace(A-r*Imat)[2] for r in rts])
         - end
         -     
         - # Returns an eigen factorization structure like the default LinearAlgebra.eigen function.
