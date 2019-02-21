@@ -1,15 +1,10 @@
 
-# Somehow enforce this dependency.
-include("HeckeExt.jl")
-
-####################
-
 module AlgebraicSolvers
 
   using MultivariatePolynomials
   using DynamicPolynomials
   using Hecke
-  using Main.HeckeExt
+  using Dory
 
   degree = DynamicPolynomials.maxdegree
 

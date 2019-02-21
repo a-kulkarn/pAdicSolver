@@ -88,11 +88,10 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
 
     R = macaulay_mat(P, L, X, ish)
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
-    println("-- -- rank of Macaulay matrix ", rank(matrix(R)))
-
     N = nullspace(R)
-    println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
 
+    println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
+    println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
 
     # The idea of the QR step is two-fold:
     # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning set (here, IdL0).

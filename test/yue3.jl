@@ -1,11 +1,7 @@
 
 using Hecke
-include("../src/HeckeExt.jl")
-include("../src/AlgebraicSolvers.jl")
-
-# module aliasing
-HKE = Main.HeckeExt
-AS = Main.AlgebraicSolvers
+using Dory
+using AlgebraicSolvers
 
 
 function raw_sol_test(P,sol)
@@ -26,7 +22,7 @@ function Base.zero(X::Type{padic})
     return Qp(0)
 end
 
-X = AS.@Ring a c
+X = @Ring a c
 n = length(X)
 
 ## Note: The system below was designed to be evil for p=89.
@@ -39,7 +35,7 @@ P = [p*Qp(1) for p in P];
 
 
 #matlist, F, B, N, Nr, R = AS.solve_macaulay(P,X,15,true);
-sol = AS.solve_macaulay(P,X,20)
+sol = solve_macaulay(P,X,20)
 
 println("\n-- sol ")
 println(sol,"\n")

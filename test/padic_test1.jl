@@ -1,11 +1,7 @@
 
 using Hecke
-include("../src/HeckeExt.jl")
-include("../src/AlgebraicSolvers.jl")
-
-# module aliasing
-HKE = Main.HeckeExt
-AS = Main.AlgebraicSolvers
+using Dory
+using AlgebraicSolvers
 
 
 function raw_sol_test(P,sol)
@@ -23,11 +19,11 @@ function Base.zero(X::Type{padic})
 end
 
 
-X = AS.@Ring x1 x2
+X = @Ring x1 x2
 n = length(X)
 
 d = 10
-M = AS.monomials(X,0:d)
+M = AlgebraicSolvers.monomials(X,0:d)
 s = length(M)
 
 failed_test_count = 0
@@ -35,10 +31,10 @@ for i=1:10
 
     #try
         #P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
-        P = hcat( [ [ 2*HKE.rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
+        P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
-        #matlist, F, B, N, Nr = AS.solve_macaulay(P,X);
-        sol = AS.solve_macaulay(P,X)
+        #matlist, F, B, N, Nr = solve_macaulay(P,X);
+        sol = solve_macaulay(P,X)
 
         println("\n-- sol ")
         println(sol,"\n")

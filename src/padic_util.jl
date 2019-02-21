@@ -614,7 +614,7 @@ function inverse_iteration!(A,shift,V)
         return V / V[m]
     end
     
-    pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)),stable=true)
+    @time pow = rectangular_solve(B,identity_matrix(B.base_ring,size(B,1)),stable=true)
 
     if TESTFLAG
         println("---pow---")
@@ -623,7 +623,7 @@ function inverse_iteration!(A,shift,V)
         println()
     end
     
-    for i=1:(A.base_ring.prec_max)
+    @time for i=1:(A.base_ring.prec_max)
         V = normalize(pow*V)
         if TESTFLAG
             println(V)

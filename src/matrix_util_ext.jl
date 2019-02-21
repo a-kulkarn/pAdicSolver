@@ -1,6 +1,5 @@
 
 ## Make some generic extensions to the matrix utilities in Nemo/Hecke
-
 using Hecke, LinearAlgebra
 import Hecke: Generic.Mat, Generic.MatElem, nmod_mat, Generic.charpoly
 
