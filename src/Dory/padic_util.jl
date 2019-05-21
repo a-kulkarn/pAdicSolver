@@ -587,6 +587,11 @@ end
 #
 #************************************************************
 
+
+#************************************************
+#  Basic inverse iteration
+#************************************************
+
 # Solve for an eigenvector using inverse iteration.
 # Note that the algorithm will not converge to a particular vector in general, but the norm of
 #
@@ -599,7 +604,7 @@ function inverse_iteration!(A,shift,V)
     # Note: If A is not known to precision at least one, really bad things happen.
     Qp = A.base_ring
     In = identity_matrix(A.base_ring, size(A,1))
-    B = A - shift*In
+    B  = A - shift*In
     
     if rank(B) < ncols(B)
         println("Value `shift` is exact eigenvalue. `shift` = ", shift)
@@ -684,55 +689,113 @@ function inverse_iteration(A, shift, v)
     return wlist,nulist
 end
 
+function inverse_iteration_decomposition(A, Amp)
 
-
-
-"""
-eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
-
-Compute the eigenvectors of a padic matrix iteratively.
-
-"""
-
-function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic)
-
-    # Right now, we don't carry around enough data (i.e, the invariant subspaces) to distinguish if
-    # points live in totally ramified extensions.
-    println("WARNING: things will go horribly wrong if there are points over ramified extensions.")
-    
-    if size(A)[1] != size(A)[2]
-        error("Input matrix must be square.")
-    end
-    
     Qp = A.base_ring
-    
-    # First, make everything in A a p-adic integer
-    vals_of_A = valuation.( A.entries )
-    min_val = minimum(vals_of_A)
-
-    if min_val==Inf
-        # In this case, A is the zero matrix.
-        return EigenSpaceDec(Qp, [zero(Qp)] , [identity_matrix(Qp, size(A)[1])] )
-    end
-
-    scale_factor = Qp(Qp.p)^max(0,Int64(-min_val))
-    Aint = scale_factor * A
-    
-    # Solve the problem modulo p
-    Amp = modp.(Aint)
     E = eigspaces(Amp)
 
     values_lift = fill(zero(Qp), 0)
     spaces_lift = fill(zero(parent(A)), 0)
 
     for i in 1:length(E.values)
+
+        # Approximate input data
         appx_eval = Qp( lift(E.values[i]) )
         appx_espace =  matrix(Qp, lift(E.spaces[i]) )
-        
+
+        # Apply inverse iteration step.
         wlist,nulist = inverse_iteration(A, appx_eval, appx_espace)
+
+        # Append refined data to the main list.
         values_lift = vcat(values_lift,nulist)
         spaces_lift = vcat(spaces_lift, wlist)
     end
+
+    return values_lift, spaces_lift
+end
+
+#************************************************
+#  Power iteration with recovery
+#************************************************
+
+# function power_iteration_decomposition(A, chi)
+#     if is_diagonal(A)
+#         return 
+#     end
+# end
+
+
+function _normalize_matrix(A)
+
+    Qp = A.base_ring
+    vals_of_A = valuation.( A.entries )
+    min_val = minimum(vals_of_A)
+
+    scale_factor = Qp(Qp.p)^max(0,Int64(-min_val))
+    return scale_factor * A
+end
+
+"""
+eigvecs(A::Hecke.Generic.Mat{T} where T <: padic)
+
+Compute the eigenvectors of a padic matrix iteratively.
+
+The `method` parameter selects the method to be used to compute the eigenvectors.
+The intended options are:
+
+-- "inverse"
+-- "classical"
+-- "power"
+-- "qr"
+
+The default is "inverse", since at the moment this is the one that is implemented.
+
+"""
+
+function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="inverse")
+
+    ## Input sanitization    
+    if size(A)[1] != size(A)[2]
+        error("Input matrix must be square.")
+    end
+
+    ## Set constants
+    Qp = A.base_ring
+
+    ##### Begin main computations #####
+    
+    if iszero(A)        
+        return EigenSpaceDec(Qp, [zero(Qp)] , [identity_matrix(Qp, size(A)[1])] )
+    end
+
+    if method == "classical"
+        error("Not Implemented")
+    end
+        
+    # Extract data from the reduction modulo p
+    Aint  = _normalize_matrix(A)
+    Amp   = modp.(Aint)
+    chiAp = charpoly(Amp)
+    factors_chiAp = Hecke.factor(chiAp)
+    
+    if isirreducible(chiAp)
+        empty_array = Array{padic,1}()
+        return EigenSpaceDec(Qp, empty_array , [matrix(Qp, size(A)[1], 0, empty_array)] )
+    end
+
+    if any( e >= 2 for (f,e) in factors_chiAp if degree(f)==1 )
+        error("Not implemented when roots are not squarefree") 
+    end
+
+    
+    ## Call decomposition method
+    if method == "inverse"
+        values_lift, spaces_lift = inverse_iteration_decomposition(A, Amp)
+    else
+        error("Not Implemented")
+    end
+
+    ## Post-processing
     
     return EigenSpaceDec(Qp, values_lift, spaces_lift)
 end
