@@ -1,8 +1,5 @@
 
 
-using Hecke
-# Needs the new matrix utilities as well.
-
 # simple function to invert a permutation array.
 function inverse_permutation(A::Array{Int64,1})
     Pinv = fill(0,length(A))
@@ -157,9 +154,9 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     min_val, min_val_index = findmin( val_list );
     
     # Allocate specific working memory for multiplications.
-    container_for_swap = padic(U[1,1].N)
+    container_for_swap    = padic(U[1,1].N)
     container_for_product = padic(U[1,1].N)
-    container_for_div = padic(U[1,1].N)
+    container_for_div     = padic(U[1,1].N)
     
     # Allocate a 2-element array to hold the index of the maximum valuation.
     min_val_index_mut = [x for x in min_val_index.I]
@@ -211,15 +208,21 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
         # Reset min_valuation for selecting new pivot.
         min_val = Inf
 
-        # Note to self: with Julia, the optimal thing to do is split up the row operations and write a for loop.
+        # Note to self: with Julia, the optimal thing to do is split up the row operations
+        # and write a for loop.
         # The entries left of the k-th column are zero, so skip these.
-        ## Cache the values of L[j,k] first.
+        # Cache the values of L[j,k] first.
         #
         if iszero(U[k,k]) continue end 
 
-        container_for_inv = inv(U[k,k])
+        # The use of the inversion command preserves relative precision. By row-pivoting,
+        # the extra powers of p cancel to give the correct leading term.
+        # the "lost" digits of precision for L[j,k] can simply be set to 0.
+        container_for_inv = inv(U[k,k]) 
+        
         for j=k+1:n
             Hecke.mul!(L[j,k],U[j,k], container_for_inv)
+            L[j,k].N = parent(L[j,k]).prec_max            # L[j,k] is really an integer.
         end
 
         zero_subdiagonal_of_column!(U,k)
@@ -265,13 +268,13 @@ function _unsafe_minus!(x::padic, y::padic)
 end
 
 # Performs multiplication and stores the result in a preexisting container
-@inline function _unsafe_mult!(container::padic, x::padic, y::padic)
-   container.N = min(x.N + y.v, y.N + x.v)
-   ccall((:padic_mul, :libflint), Nothing,
-         (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
-               container, x, y, parent(x))
-   return
-end
+# @inline function _unsafe_mult!(container::padic, x::padic, y::padic)
+#    container.N = min(x.N + y.v, y.N + x.v)
+#    ccall((:padic_mul, :libflint), Nothing,
+#          (Ref{padic}, Ref{padic}, Ref{padic}, Ref{FlintPadicField}),
+#                container, x, y, parent(x))
+#    return
+# end
 
 # Assumes that |a| ≤ |b| ≠ 0. Computes a padic integer x such that |a - xb| ≤ p^N, where N is the ring precision.
 # This prevents the division of small numbers by powers of p.
@@ -707,8 +710,8 @@ function inverse_iteration_decomposition(A, Amp)
         wlist,nulist = inverse_iteration(A, appx_eval, appx_espace)
 
         # Append refined data to the main list.
-        values_lift = vcat(values_lift,nulist)
-        spaces_lift = vcat(spaces_lift, wlist)
+        values_lift = vcat(values_lift, nulist)
+        spaces_lift = vcat(spaces_lift,  wlist)
     end
 
     return values_lift, spaces_lift
@@ -723,6 +726,57 @@ end
 #         return 
 #     end
 # end
+
+#************************************************
+#  QR-iteration 
+#************************************************
+
+"""
+   blockschurform
+
+    Computes the block schur form of a padic matrix A, where the
+    blocks correspond to the different eigenvalues of A modulo p.
+"""
+function blockschurform(A::Hecke.Generic.Mat{T} where T <: padic)
+
+    Qp = A.base_ring
+    N = Qp.prec_max
+    
+    # Extract data from the reduction modulo p
+    Aint  = _normalize_matrix(A)
+    Amp   = modp.(Aint)
+    chiAp = charpoly(Amp)
+
+    B = deepcopy(A)
+    id= identity_matrix(Qp, size(B)[1])
+    
+    for (rt,m) in roots_with_multiplicities(chiAp)
+        
+        lambdaI = lift(rt)*id
+
+        # Regarding convergence. It seems like it needs a little extra time to
+        # sort the terms via permutation.
+        for i in 1:N*m
+            F = padic_qr(B - lambdaI)
+
+            # Note about Julia's syntax. A[:,F.p] = A*inv(P), for a permutation P.
+            B = F.R[:,F.p] * F.Q + lambdaI
+        end        
+    end
+    
+    return B
+end
+
+function roots_with_multiplicities(f)
+    F = Hecke.factor(f)
+    return [(-g(0), m) for (g,m) in F if Hecke.degree(g) == 1]
+end
+
+
+function qr_iteration_decomposition(A,Amp)
+    
+end
+
 
 
 function _normalize_matrix(A)
@@ -783,6 +837,9 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="inverse")
         return EigenSpaceDec(Qp, empty_array , [matrix(Qp, size(A)[1], 0, empty_array)] )
     end
 
+    
+    # FAILSAFE DURING DEVELOPMENT...
+    # Fail automatically if there are large invariant subspaces mod p
     if any( e >= 2 for (f,e) in factors_chiAp if degree(f)==1 )
         error("Not implemented when roots are not squarefree") 
     end

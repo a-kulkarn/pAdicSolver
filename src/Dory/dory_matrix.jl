@@ -1,7 +1,6 @@
 
 ## Make some generic extensions to the matrix utilities in Nemo/Hecke
-using Hecke, LinearAlgebra
-import Hecke: Generic.Mat, Generic.MatElem, nmod_mat, Generic.charpoly
+
 
 # I don't actually want LinearAlgebra as a dependency, but I do want to mimick the syntax
 # to provide familiarity for the user.
