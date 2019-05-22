@@ -806,17 +806,6 @@ end
 #  QR-iteration 
 #************************************************
 
-""" 
-    hessenburg
-    
-    Computes the hessenburg form of a matrix.
-
-    
-"""
-
-
-
-
 """
    blockschurform
 
