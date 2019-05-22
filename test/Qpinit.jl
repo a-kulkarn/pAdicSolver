@@ -21,6 +21,9 @@ A = random_test_matrix(Qp,5)
 @time X = Dory.block_schur_form(A)
 #H = Dory.hessenberg(A)
 
-println()
-display(factor(charpoly( modp.(A))))
-display(Dory.valuation.(X))
+vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
+
+
+display(vals[1].entries)
+
+display(spaces[1].entries)

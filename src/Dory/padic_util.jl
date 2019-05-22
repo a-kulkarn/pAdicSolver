@@ -717,16 +717,64 @@ function inverse_iteration_decomposition(A, Amp)
     return values_lift, spaces_lift
 end
 
-#************************************************
-#  Power iteration with recovery
-#************************************************
 
-# function power_iteration_decomposition(A, chi)
-#     if is_diagonal(A)
-#         return 
-#     end
-# end
+###############################################################################
+#
+#   Power iteration decomposition
+#
+###############################################################################
 
+
+function power_iteration_decomposition(A, Amp)
+
+    Qp = A.base_ring
+    N = Qp.prec_max
+    E = eigspaces(Amp)
+
+    restricted_maps = Array{typeof(fill(zero(Qp), 0)),1}()
+    spaces_lift = Array{typeof(fill(zero(parent(A)), 0)), 1}()
+
+    roots_and_mults = roots_with_multiplicities(Hecke.charpoly(Amp))
+
+    if length(E.values) > 0
+        M = maximum( [ a[2] for a in roots_and_mults])
+    end
+    
+    for i in 1:length(E.values)
+       
+        # Approximate input data
+        appx_eval = Qp( lift(E.values[i]) )
+        appx_espace =  matrix(Qp, lift(E.spaces[i]) )
+
+        # Apply power iteration step.
+
+        B = A - appx_eval*identity_matrix(Qp,size(A,1))
+
+        for j=1:ceil(log2(M*N))
+            B = B^2
+        end
+
+        _,V = nullspace(B)
+        X = rectangular_solve(A*V, V, stable=true)
+        
+        # Append refined data to the main list.
+        restricted_maps = vcat(restricted_maps, [X])
+        spaces_lift = vcat(spaces_lift,  [V])
+    end
+
+    return restricted_maps, spaces_lift
+
+end
+
+###############################################################################
+#
+#   "Classical Algorithm"
+#
+###############################################################################
+
+function ClassicalAlgorithm(A)
+    error("Classical Algorithm not implemented in Julia. Progress is being made on prerequisite interfaces...")
+end
 
 ###############################################################################
 #
@@ -806,16 +854,6 @@ end
 #  QR-iteration 
 #************************************************
 
-""" 
-    hessenburg
-    
-    Computes the hessenburg form of a matrix.
-
-    
-"""
-
-
-
 
 """
    blockschurform
@@ -856,11 +894,6 @@ end
 function roots_with_multiplicities(f)
     F = Hecke.factor(f)
     return [(-g(0), m) for (g,m) in F if Hecke.degree(g) == 1]
-end
-
-
-function qr_iteration_decomposition(A,Amp)
-    
 end
 
 
@@ -927,7 +960,7 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="inverse")
     # FAILSAFE DURING DEVELOPMENT...
     # Fail automatically if there are large invariant subspaces mod p
     if any( e >= 2 for (f,e) in factors_chiAp if degree(f)==1 )
-        error("Not implemented when roots are not squarefree") 
+        error("Development Failsafe: Not implemented when roots are not squarefree") 
     end
 
     
