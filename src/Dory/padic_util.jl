@@ -727,9 +727,95 @@ end
 #     end
 # end
 
+
+###############################################################################
+#
+#   Hessenberg form
+#
+###############################################################################
+
+function hessenberg!(A::Hecke.Generic.Mat{T} where T <: padic)
+    !issquare(A) && error("Dimensions don't match in hessenberg")
+    R = base_ring(A)
+    n = nrows(A)
+    u = R()
+    t = R()
+    
+    for m = 1:n - 2
+
+        val_list = float64_valuation.(A.entries[ m+1 : n , m ])
+        minn, row_pivot_index = findmin( val_list );
+        if minn==Inf continue end
+
+        i = row_pivot_index + m;
+        
+        # Perform a row/column swap to move the pivot to the subdiagonal
+        if i > m+1
+            for j = m:n
+                A[i, j], A[m+1, j] = A[m+1, j], A[i, j]
+            end
+            for j = 1:n
+                A[j, i], A[j, m+1] = A[j, m+1], A[j, i]
+            end
+        end
+
+        # cache the inverted pivot.
+        h = -inv(A[m+1, m])
+
+        # Perform the elimination.
+        for i = m + 2:n
+            if iszero(A[i, m]) continue end
+            
+            u = Hecke.mul!(u, A[i, m], h)
+
+            # Row operatons
+            for j = m+1:n
+                t = Hecke.mul!(t, u, A[m+1, j])
+                A[i, j] = addeq!(A[i, j], t)
+            end
+            u = -u
+
+            # Column eliminations
+            for j = 1:n
+                t = Hecke.mul!(t, u, A[j, i])
+                A[j, m+1] = addeq!(A[j, m+1], t)
+            end
+            A[i, m] = R()            
+        end        
+    end
+end
+
+"""
+    hessenberg(A::Generic.MatrixElem{T}) where {T <: padic}
+> Returns the Hessenberg form of M, i.e. an upper Hessenberg matrix
+> which is similar to M. The upper Hessenberg form has nonzero entries
+> above and on the diagonal and in the diagonal line immediately below the
+> diagonal.
+> A padically stable form of the algorithm is used, where pivots are 
+> selected carefully.
+"""
+function hessenberg(A::Hecke.Generic.Mat{T} where T <: padic)
+   !issquare(A) && error("Dimensions don't match in hessenberg")
+   M = deepcopy(A)
+   hessenberg!(M)
+   return M
+end
+
+
 #************************************************
 #  QR-iteration 
 #************************************************
+
+""" 
+    hessenburg
+    
+    Computes the hessenburg form of a matrix.
+
+    
+"""
+
+
+
 
 """
    blockschurform
@@ -737,7 +823,7 @@ end
     Computes the block schur form of a padic matrix A, where the
     blocks correspond to the different eigenvalues of A modulo p.
 """
-function blockschurform(A::Hecke.Generic.Mat{T} where T <: padic)
+function block_schur_form(A::Hecke.Generic.Mat{T} where T <: padic)
 
     Qp = A.base_ring
     N = Qp.prec_max
@@ -747,7 +833,7 @@ function blockschurform(A::Hecke.Generic.Mat{T} where T <: padic)
     Amp   = modp.(Aint)
     chiAp = charpoly(Amp)
 
-    B = deepcopy(A)
+    B = hessenberg(A)
     id= identity_matrix(Qp, size(B)[1])
     
     for (rt,m) in roots_with_multiplicities(chiAp)

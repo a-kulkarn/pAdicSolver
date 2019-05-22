@@ -2,8 +2,8 @@
 
 
 
-Qp = PadicField(7,2)
-A = random_test_matrix(Qp)
+Qp = PadicField(7,5)
+A = random_test_matrix(Qp,5)
 
 
 # TODO: improve the matrix constructor so that it is actually intuitive.
@@ -18,8 +18,9 @@ A = random_test_matrix(Qp)
 # A = matrix(Qp, entarr)
 
 
-X = Dory.blockschurform(A)
+@time X = Dory.block_schur_form(A)
+#H = Dory.hessenberg(A)
 
 println()
 display(factor(charpoly( modp.(A))))
-display(X.entries)
+display(Dory.valuation.(X))
