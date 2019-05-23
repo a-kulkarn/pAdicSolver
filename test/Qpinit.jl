@@ -18,8 +18,12 @@ A = random_test_matrix(Qp,5)
 # A = matrix(Qp, entarr)
 
 
-@time X = Dory.block_schur_form(A)
+@time X,V = Dory.block_schur_form(A)
 #H = Dory.hessenberg(A)
+
+display( valuation.(inv(V)*X*V - A))
+
+@assert iszero(inv(V)*X*V - A)
 
 vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
 

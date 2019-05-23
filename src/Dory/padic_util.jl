@@ -782,12 +782,18 @@ end
 #
 ###############################################################################
 
-function hessenberg!(A::Hecke.Generic.Mat{T} where T <: padic)
+# Also return a basis by default.
+
+function hessenberg!(A::Hecke.Generic.Mat{T} where T <: padic; basis=Val(true))
     !issquare(A) && error("Dimensions don't match in hessenberg")
     R = base_ring(A)
     n = nrows(A)
     u = R()
     t = R()
+
+    if basis == Val(true)
+        B = identity_matrix(R, size(A,1))
+    end
     
     for m = 1:n - 2
 
@@ -805,6 +811,12 @@ function hessenberg!(A::Hecke.Generic.Mat{T} where T <: padic)
             for j = 1:n
                 A[j, i], A[j, m+1] = A[j, m+1], A[j, i]
             end
+
+            if basis==Val(true)
+                for j = 1:n
+                    B[i, j], B[m+1, j] = B[m+1, j], B[i, j]
+                end
+            end
         end
 
         # cache the inverted pivot.
@@ -817,9 +829,16 @@ function hessenberg!(A::Hecke.Generic.Mat{T} where T <: padic)
             u = Hecke.mul!(u, A[i, m], h)
 
             # Row operatons
-            for j = m+1:n
-                t = Hecke.mul!(t, u, A[m+1, j])
-                A[i, j] = addeq!(A[i, j], t)
+            for j = 1:n
+                if j > m
+                    t = Hecke.mul!(t, u, A[m+1, j])
+                    A[i, j] = addeq!(A[i, j], t)
+                end
+                    
+                if basis==Val(true)
+                    t = Hecke.mul!(t, u, B[m+1,j])
+                    B[i,j] = addeq!(B[i,j],t)
+                end
             end
             u = -u
 
@@ -830,6 +849,12 @@ function hessenberg!(A::Hecke.Generic.Mat{T} where T <: padic)
             end
             A[i, m] = R()            
         end        
+    end
+
+    if basis==Val(true)
+        return B
+    else
+        return
     end
 end
 
@@ -842,11 +867,11 @@ end
 > A padically stable form of the algorithm is used, where pivots are 
 > selected carefully.
 """
-function hessenberg(A::Hecke.Generic.Mat{T} where T <: padic)
+function hessenberg(A::Hecke.Generic.Mat{T} where T <: padic, basis=Val(true))
    !issquare(A) && error("Dimensions don't match in hessenberg")
    M = deepcopy(A)
-   hessenberg!(M)
-   return M
+   B = hessenberg!(M, basis=Val(true))
+   return M, B
 end
 
 
@@ -874,8 +899,8 @@ function block_schur_form(A::Hecke.Generic.Mat{T} where T <: padic)
     Amp   = modp.(Aint)
     chiAp = charpoly(Amp)
 
-    B = hessenberg(A)
-    id= identity_matrix(Qp, size(B)[1])
+    B, V = hessenberg(A)
+    id= identity_matrix(Qp, size(B,1))
     
     for (rt,m) in roots_with_multiplicities(chiAp)
         
@@ -888,10 +913,11 @@ function block_schur_form(A::Hecke.Generic.Mat{T} where T <: padic)
 
             # Note about Julia's syntax. A[:,F.p] = A*inv(P), for a permutation P.
             B = F.R[:,F.p] * F.Q + lambdaI
+            V = inv_unit_lower_triangular(F.Q)*V[F.p,:]
         end        
     end
     
-    return B
+    return B,V
 end
 
 function roots_with_multiplicities(f)
@@ -922,13 +948,13 @@ The intended options are:
 -- "inverse"
 -- "classical"
 -- "power"
--- "qr"
+-- "qr" or "schur"
 
 The default is "inverse", since at the moment this is the one that is implemented.
 
 """
 
-function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="inverse")
+function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="power")
 
     ## Input sanitization    
     if size(A)[1] != size(A)[2]
@@ -979,7 +1005,9 @@ function _eigenspaces_by_inverse_iteration(A::Hecke.Generic.Mat{T} where T <: pa
         
     if isirreducible(chiAp)
         empty_array = Array{padic,1}()
-        return EigenSpaceDec(Qp, empty_array , [matrix(Qp, size(A)[1], 0, empty_array)] )
+        empty_spaces_array = Array{ Hecke.Generic.Mat{padic}, 1}()
+        
+        return EigenSpaceDec(Qp, empty_array , empty_spaces_array )
     end
     
     # FAILSAFE DURING DEVELOPMENT...
@@ -1004,7 +1032,9 @@ function _eigenspaces_by_power_iteration(A::Hecke.Generic.Mat{T} where T <: padi
         
     if isirreducible(chiAp)
         empty_array = Array{padic,1}()
-        return EigenSpaceDec(Qp, empty_array , [matrix(Qp, size(A)[1], 0, empty_array)] )
+        empty_spaces_array = Array{ Hecke.Generic.Mat{padic}, 1}()
+        
+        return EigenSpaceDec(Qp, empty_array , empty_spaces_array )
     end
 
     # Check to ensure chiAp is not an n-th power
