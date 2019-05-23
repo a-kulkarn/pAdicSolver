@@ -755,7 +755,7 @@ function power_iteration_decomposition(A, Amp)
         end
 
         _,V = nullspace(B)
-        X = rectangular_solve(A*V, V, stable=true)
+        X = rectangular_solve(V, A*V, stable=true)
         
         # Append refined data to the main list.
         restricted_maps = vcat(restricted_maps, [X])
@@ -772,7 +772,7 @@ end
 #
 ###############################################################################
 
-function ClassicalAlgorithm(A)
+function _eigenspaces_by_classical(A)
     error("Classical Algorithm not implemented in Julia. Progress is being made on prerequisite interfaces...")
 end
 
@@ -860,6 +860,9 @@ end
 
     Computes the block schur form of a padic matrix A, where the
     blocks correspond to the different eigenvalues of A modulo p.
+
+    NOTE: Presently, block_shur_form does not also return the 
+    change of basis matrix.
 """
 function block_schur_form(A::Hecke.Generic.Mat{T} where T <: padic)
 
@@ -935,7 +938,6 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="inverse")
     ## Set constants
     Qp = A.base_ring
 
-    ##### Begin main computations #####
     
     if iszero(A)        
         return EigenSpaceDec(Qp, [zero(Qp)] , [identity_matrix(Qp, size(A)[1])] )
@@ -943,19 +945,42 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="inverse")
 
     if method == "classical"
         error("Not Implemented")
-    end
         
-    # Extract data from the reduction modulo p
+    elseif method == "inverse"
+        return  _eigenspaces_by_inverse_iteration(A)
+        
+    elseif method == "schur" || method == "qr"
+        error("Not Implemented. However, block_shur_form is available to compute the schur form.")
+        
+    elseif method == "power"
+        return  _eigenspaces_by_power_iteration(A)
+        
+    else
+        error("Not Implemented")
+    end
+
+end
+
+function _modp_charpoly_data(A::Hecke.Generic.Mat{T} where T <: padic)
     Aint  = _normalize_matrix(A)
     Amp   = modp.(Aint)
     chiAp = charpoly(Amp)
-    factors_chiAp = Hecke.factor(chiAp)
+
+    return Aint, Amp, chiAp
+end
+
+function _eigenspaces_by_inverse_iteration(A::Hecke.Generic.Mat{T} where T <: padic)
     
+    # Extract data from the reduction modulo p
+    Qp = A.base_ring
+    Aint, Amp, chiAp = _modp_charpoly_data(A)    
+    factors_chiAp = Hecke.factor(chiAp)
+
+        
     if isirreducible(chiAp)
         empty_array = Array{padic,1}()
         return EigenSpaceDec(Qp, empty_array , [matrix(Qp, size(A)[1], 0, empty_array)] )
     end
-
     
     # FAILSAFE DURING DEVELOPMENT...
     # Fail automatically if there are large invariant subspaces mod p
@@ -963,20 +988,62 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="inverse")
         error("Development Failsafe: Not implemented when roots are not squarefree") 
     end
 
+    # Iteration call
+    values_lift, spaces_lift = inverse_iteration_decomposition(A, Amp)
+
+    return EigenSpaceDec(Qp, values_lift, spaces_lift)
     
-    ## Call decomposition method
-    if method == "inverse"
-        values_lift, spaces_lift = inverse_iteration_decomposition(A, Amp)
-    else
-        error("Not Implemented")
+end
+
+function _eigenspaces_by_power_iteration(A::Hecke.Generic.Mat{T} where T <: padic)
+
+    Qp = A.base_ring
+    Aint, Amp, chiAp = _modp_charpoly_data(A)
+
+    factors_chiAp = Hecke.factor(chiAp)
+        
+    if isirreducible(chiAp)
+        empty_array = Array{padic,1}()
+        return EigenSpaceDec(Qp, empty_array , [matrix(Qp, size(A)[1], 0, empty_array)] )
     end
 
-    ## Post-processing
+    # Check to ensure chiAp is not an n-th power
+    if length(factors_chiAp) == 1 && values(factors_chiAp)[1] == size(A,1)
+        _eigenspaces_by_classical(A)
+    end
+
+    # Iteration call
+    restricted_maps, invariant_blocks = power_iteration_decomposition(A, Amp)
+
+    # Postprocessing
+    values = fill(zero(Qp), 0)
+    spaces = fill(zero(parent(A)), 0)    
     
-    return EigenSpaceDec(Qp, values_lift, spaces_lift)
+    for i = 1:length(restricted_maps)
+
+        X = restricted_maps[i]
+
+        if size(X,1) == 1
+            push!(values, X[1,1])
+            push!(spaces, invariant_blocks[i])
+        else
+            # Recursive call
+            E = _eigenspaces_by_classical(X)
+
+            for i = 1:length(E.values)
+                push!(values, E.values[i])
+                push!(spaces, E.spaces[i])
+            end
+            
+        end
+        
+    end
+    
+    return EigenSpaceDec(Qp, values, spaces)
 end
 
 
+############################################################################################
 
 # function for testing
 """

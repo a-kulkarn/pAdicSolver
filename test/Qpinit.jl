@@ -2,7 +2,7 @@
 
 
 
-Qp = PadicField(7,5)
+Qp = PadicField(7,30)
 A = random_test_matrix(Qp,5)
 
 
@@ -23,7 +23,11 @@ A = random_test_matrix(Qp,5)
 
 vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
 
+E = Dory._eigenspaces_by_power_iteration(A)
 
-display(vals[1].entries)
-
-display(spaces[1].entries)
+if length(vals) > 0
+    display(vals[1].entries)
+    display(spaces[1].entries)
+end
+    
+display(E)
