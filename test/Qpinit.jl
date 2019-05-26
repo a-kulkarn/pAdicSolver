@@ -3,7 +3,6 @@
 
 
 Qp = PadicField(7,30)
-A = random_test_matrix(Qp,5)
 
 
 # TODO: improve the matrix constructor so that it is actually intuitive.
@@ -18,20 +17,29 @@ A = random_test_matrix(Qp,5)
 # A = matrix(Qp, entarr)
 
 
-@time X,V = Dory.block_schur_form(A)
-#H = Dory.hessenberg(A)
 
-display( valuation.(inv(V)*X*V - A))
+for i=1:10
 
-@assert iszero(inv(V)*X*V - A)
+    A = random_test_matrix(Qp,50)
+    @time X,V = Dory.block_schur_form(A)
+    @assert iszero(X*V - V*A)
 
-vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
+    display(factor(charpoly(modp.(A))))
+    #display(valuation.(X))
+    println()
 
-E = Dory._eigenspaces_by_power_iteration(A)
+end 
 
-if length(vals) > 0
-    display(vals[1].entries)
-    display(spaces[1].entries)
-end
     
-display(E)
+# @assert iszero(inv(V)*X*V - A)
+
+# vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
+
+# E = Dory._eigenspaces_by_power_iteration(A)
+
+# if length(vals) > 0
+#     display(vals[1].entries)
+#     display(spaces[1].entries)
+# end
+    
+# display(E)
