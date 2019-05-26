@@ -129,10 +129,14 @@ end
 #     A
 # end
 
+function is_divisible_by_x0(m)
+    return degree(gcd(m, gens(parent(m))[1])) > 0
+end
+
 # Figure out what L0 should be
 function monomials_divisible_by_x0(L,ish)
     if ish
-        return filter(m->(m.z[1]>0), L) # NOTE: m.z is the vector of exponents of the monomial.
+        return filter(is_divisible_by_x0, L) 
     else
         d  = maximum([degree(m) for m in L])
         return filter(m->degree(m)<d,L)
@@ -145,7 +149,7 @@ function permute_and_divide_by_x0(L0,F,ish)
     if ish
         for i in 1:m
             m = copy(L0[F.p[i]])
-            m.z[1]-=1
+            divexact(m, gens(parent(m))[1])
             push!(B, m)
             # should test if the diag. coeff. is not small
         end

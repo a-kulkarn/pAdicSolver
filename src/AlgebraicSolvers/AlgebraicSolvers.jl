@@ -16,7 +16,8 @@ module AlgebraicSolvers
 
   Base.one(X::Vector{PolyVar{true}}) = monomials(X,0)[1]
 
-  include("convert_dynamic_polynomials.jl") 
+  include("polynomial_ext.jl")
+  include("convert_dynamic_polynomials.jl")
   include("mindex.jl")
   include("matrix.jl")
   include("pmatrix_util.jl")

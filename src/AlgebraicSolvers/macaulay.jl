@@ -5,7 +5,7 @@ using DynamicPolynomials
 
 function is_not_homogeneous(p)
     L = [degree(t) for t in p]
-    maximum(L) != minimum(L)
+    return maximum(L) != minimum(L)
 end
 
 
@@ -13,9 +13,9 @@ end
 function macaulay_mat(P, L::AbstractVector, X, ish = false )
     d = maximum([degree(m) for m in L])
     if ish
-        Q = [monomials(X,d-degree(P[i])) for i in 1:length(P)]
+        Q = [monomials_of_degree(X,d-degree(P[i])) for i in 1:length(P)]
     else
-        Q = [monomials(X,0:d-degree(P[i])) for i in 1:length(P)]
+        Q = [monomials_of_degree(X,0:d-degree(P[i])) for i in 1:length(P)]
     end
 
     ### this looks like it can be optimized a bit.
@@ -40,9 +40,9 @@ end
 # AVI: The t.\alpha is the coefficient of the term.
 #
 # L -- list of monomials
-import MultivariatePolynomials.coefficients
+#import MultivariatePolynomials.coefficients
 function coefficient_matrix(P::Vector, L)
-    return Array(transpose(hcat([MultivariatePolynomials.coefficients(p, L) for p in P]...)))
+    return Array(transpose(hcat([coeff(p, L) for p in P]...)))
 end
 
 
@@ -67,9 +67,9 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
     ish = !any(is_not_homogeneous, P)
     println("-- Homogeneity ", ish)
     if ish
-        L = [m for m in monomials(X, rho)]
+        L = [m for m in monomials_of_degree(X, rho)]
     else
-        L = [m for m in monomials(X, 0:rho)]
+        L = [m for m in monomials_of_degree(X, 0:rho)]
     end
     # We also specifically designate the "monomial" of x0 in the computations.
     # in the affine case, the monomial x0 is just "1", in which case we mean take the
