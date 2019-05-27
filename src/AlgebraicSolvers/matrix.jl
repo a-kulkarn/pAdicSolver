@@ -129,23 +129,27 @@ end
 #     A
 # end
 
+function is_divisible_by_x0(m)
+    return degree(gcd(m, gens(parent(m))[1])) > 0
+end
+
 # Figure out what L0 should be
 function monomials_divisible_by_x0(L,ish)
     if ish
-        return filter(m->(m.z[1]>0), L) # NOTE: m.z is the vector of exponents of the monomial.
+        return filter(is_divisible_by_x0, L) 
     else
-        d  = maximum([degree(m) for m in L])
-        return filter(m->degree(m)<d,L)
+        d  = maximum([total_degree(m) for m in L])
+        return filter(m->total_degree(m)<d,L)
     end
 end
 
 function permute_and_divide_by_x0(L0,F,ish)
     B = []
-    m = size(F.Q,1)
+    m = size(F.Q,1) # rename this...
     if ish
         for i in 1:m
             m = copy(L0[F.p[i]])
-            m.z[1]-=1
+            divexact(m, gens(parent(m))[1])
             push!(B, m)
             # should test if the diag. coeff. is not small
         end
@@ -175,8 +179,8 @@ function mult_matrices(B, X, K, L, ish = false)
     Idx = idx(B)
 
     # For an affine system, '1' is needed as a monomial as well.
-    if !ish Y = vcat([DynamicPolynomials.Monomial{true}()],X) else Y = X end
-
+    if !ish Y = vcat([parent(X[1])(1)],X) else Y = X end
+    
     function construct_monomial_mult_matrix(v)
         M = fill( eltype(K)(0), length(B), size(K,2) )
         for (m,i) in Idx.terms

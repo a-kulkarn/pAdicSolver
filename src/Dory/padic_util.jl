@@ -133,7 +133,8 @@ struct QRPadicPivoted
     q::Array{Int64,1}
 end
 
-function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
+function padic_qr(A::Hecke.Generic.MatElem{padic};
+                  col_pivot=Val(false) :: Union{Val{true},Val{false}})
 
     # Set constants
     n = size(A,1)::Int64
@@ -171,7 +172,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
     
     for k=1:(min(n,m)::Int64)
 
-        if col_pivot==Val{true}
+        if col_pivot==Val(true)
             col_index=min_val_index_mut[2]
             if col_index!=k
                 # interchange columns m and k in U
@@ -180,9 +181,7 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
                 end
                 
                 # interchange entries m and k in Pcol
-                temp=Pcol[k];
-                Pcol[k]=Pcol[col_index];
-                Pcol[col_index]=temp;
+                Pcol[k], Pcol[col_index] = Pcol[col_index], Pcol[k]
             end
         end
         
@@ -213,7 +212,12 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
         # The entries left of the k-th column are zero, so skip these.
         # Cache the values of L[j,k] first.
         #
-        if iszero(U[k,k]) continue end 
+        if iszero(U[k,k])
+            # If col_pivot == true, then we don't need to perform further column swaps
+            # in this case, since the element of largest valuation in the lower-right
+            # block is zero. In fact, no further operations need to be performed.
+            continue
+        end 
 
         # The use of the inversion command preserves relative precision. By row-pivoting,
         # the extra powers of p cancel to give the correct leading term.
@@ -347,7 +351,7 @@ end
 import LinearAlgebra.svd
 function svd(A::Hecke.Generic.MatElem{padic})
 
-    F = padic_qr(A, col_pivot=Val{true})
+    F = padic_qr(A, col_pivot=Val(true))
     G = padic_qr(transpose(F.R))
 
     @assert G.p == [i for i=1:length(G.p)]
@@ -378,7 +382,7 @@ end
 
 # Returns the p-adic singular values of a matrix
 function singular_values(A::Hecke.MatElem{padic})
-    F = padic_qr(A,col_pivot=Val{true})
+    F = padic_qr(A,col_pivot=Val(true))
     return [ F.R[i,i] for i=1:minimum(size(A)) ]
 end
 
@@ -388,7 +392,7 @@ function nullspace(A::Hecke.MatElem{padic})
 
     m = nrows(A)
     n = ncols(A)
-    F = padic_qr(transpose(A), col_pivot=Val{true})
+    F = padic_qr(transpose(A), col_pivot=Val(true))
 
     col_list = Array{Int64,1}()
     for i=1:min(n,m)
@@ -878,7 +882,6 @@ end
 #************************************************
 #  QR-iteration 
 #************************************************
-
 
 """
    blockschurform

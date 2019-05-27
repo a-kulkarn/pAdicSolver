@@ -4,18 +4,18 @@ using LinearAlgebra
 using DynamicPolynomials
 
 function is_not_homogeneous(p)
-    L = [degree(t) for t in p]
-    maximum(L) != minimum(L)
+    L = [total_degree(t) for t in Hecke.terms(p)]
+    return maximum(L) != minimum(L)
 end
 
 
 # Creates the macaulay matrix of the polynomial system P.
 function macaulay_mat(P, L::AbstractVector, X, ish = false )
-    d = maximum([degree(m) for m in L])
+    d = maximum([total_degree(m) for m in L])
     if ish
-        Q = [monomials(X,d-degree(P[i])) for i in 1:length(P)]
+        Q = [monomials_of_degree(X,d-total_degree(P[i])) for i in 1:length(P)]
     else
-        Q = [monomials(X,0:d-degree(P[i])) for i in 1:length(P)]
+        Q = [monomials_of_degree(X,0:d-total_degree(P[i])) for i in 1:length(P)]
     end
 
     ### this looks like it can be optimized a bit.
@@ -40,9 +40,9 @@ end
 # AVI: The t.\alpha is the coefficient of the term.
 #
 # L -- list of monomials
-import MultivariatePolynomials.coefficients
+#import MultivariatePolynomials.coefficients
 function coefficient_matrix(P::Vector, L)
-    return Array(transpose(hcat([MultivariatePolynomials.coefficients(p, L) for p in P]...)))
+    return Array(transpose(hcat([coeff(p, L) for p in P]...)))
 end
 
 
@@ -61,15 +61,16 @@ end
 # X   -- variables in the polynomial system
 # rho -- monomial degree of the system. Default is the macaulay degree.
 #
-function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1, test_mode=false )
+function solve_macaulay(P, X; rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1, test_mode=false )
     println()
-    println("-- Degrees ", map(p->degree(p),P))
+    println("-- Degrees ", map(p->total_degree(p),P))
+    
     ish = !any(is_not_homogeneous, P)
     println("-- Homogeneity ", ish)
     if ish
-        L = [m for m in monomials(X, rho)]
+        L = [m for m in monomials_of_degree(X, rho)]
     else
-        L = [m for m in monomials(X, 0:rho)]
+        L = [m for m in monomials_of_degree(X, 0:rho)]
     end
     # We also specifically designate the "monomial" of x0 in the computations.
     # in the affine case, the monomial x0 is just "1", in which case we mean take the
@@ -112,7 +113,7 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
 
     if test_mode
         println("TESTING MODE: Computation incomplete. Returning partial result.")
-        return M, F, B, N, Nr, R
+        return M, F, B, N, Nr, R, IdL0, Idx
     end
 
     Xi = normalized_simultaneous_eigenvalues(M,ish)
@@ -133,6 +134,6 @@ end
 
 # Dispatcher for doing the right iwasawa algorithm
 function iwasawa_step(N :: Array{padic,2} , IdL0)
-    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
+    F = qr( Array(transpose(N[IdL0,:])), Val(true))
     return F, N*inv(matrix(parent(N[1,1]), Array(transpose(F.Q)))).entries
 end

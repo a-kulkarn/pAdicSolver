@@ -3,6 +3,8 @@ module AlgebraicSolvers
 
   using MultivariatePolynomials
   using DynamicPolynomials
+  using AbstractAlgebra
+  using Nemo
   using Hecke
   using Dory
 
@@ -14,6 +16,8 @@ module AlgebraicSolvers
 
   Base.one(X::Vector{PolyVar{true}}) = monomials(X,0)[1]
 
+  include("polynomial_ext.jl")
+  include("convert_dynamic_polynomials.jl")
   include("mindex.jl")
   include("matrix.jl")
   include("pmatrix_util.jl")
@@ -22,20 +26,5 @@ module AlgebraicSolvers
   #include("toric.jl")
 
 
-
-  function buildpolyvar(::Type{PV}, arg, var) where PV
-    :($(esc(arg)) = $var)
-  end
-
-  export @Ring
-  macro Ring(args...)
-    X = DynamicPolynomials.PolyVar{true}[DynamicPolynomials.PolyVar{true}(string(arg)) for arg in args]
-    V = [buildpolyvar(DynamicPolynomials.PolyVar{true}, args[i], X[i]) for i in 1:length(X)]
-    push!(V, :(TMP = $X) )
-    reduce((x,y) -> :($x; $y), V; init = :() )
-  end
-
-  export monomials
-  monomials = DynamicPolynomials.monomials
 
 end
