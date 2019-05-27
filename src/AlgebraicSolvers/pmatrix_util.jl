@@ -33,10 +33,11 @@ function normalized_simultaneous_eigenvalues(
 
     println("Valuations of singular values: ")
     println(valuation.(singular_values(M0)))
-    
+
+    # The rectangular solve step is enough to kill off any helpful data mod p.
     @time I0 = rectangular_solve(M0,identity_matrix(M0.base_ring,size(M0,1)))
     @time Mg = I0*M[1]
-    
+
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     eigen_subspaces  = eigspaces(Mg, method=method)
     

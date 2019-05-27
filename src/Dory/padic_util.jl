@@ -1040,19 +1040,29 @@ function _eigenspaces_by_power_iteration(A::Hecke.Generic.Mat{T} where T <: padi
 
     Qp = A.base_ring
     Aint, Amp, chiAp = _modp_charpoly_data(A)
-
     factors_chiAp = Hecke.factor(chiAp)
+    
+    empty_array = Array{padic,1}()
+    empty_spaces_array = Array{ Hecke.Generic.Mat{padic}, 1}()    
         
-    if isirreducible(chiAp)
-        empty_array = Array{padic,1}()
-        empty_spaces_array = Array{ Hecke.Generic.Mat{padic}, 1}()
-        
+    if isirreducible(chiAp)        
         return EigenSpaceDec(Qp, empty_array , empty_spaces_array )
     end
 
+    factor_multiplicities = collect(Base.values(factors_chiAp.fac))
+
+    println(Amp)
+    
+    println(factor_multiplicities)
+    
     # Check to ensure chiAp is not an n-th power
-    if length(factors_chiAp) == 1 && Base.values(collect(factors_chiAp.fac))[1] == size(A,1)
-        _eigenspaces_by_classical(A)
+    if length(factors_chiAp) == 1 && factor_multiplicities[1] == size(A,1)
+        return try
+            _eigenspaces_by_classical(A)
+        catch e
+            println("Classical Algorithm not implemented. Skipping this eigenvalue...")
+            EigenSpaceDec(Qp, empty_array , empty_spaces_array )
+        end
     end
 
     # Iteration call
@@ -1061,6 +1071,8 @@ function _eigenspaces_by_power_iteration(A::Hecke.Generic.Mat{T} where T <: padi
     # Postprocessing
     values = fill(zero(Qp), 0)
     spaces = fill(zero(parent(Aint)), 0)    
+
+    println(length(restricted_maps))
     
     for i = 1:length(restricted_maps)
 
@@ -1071,12 +1083,18 @@ function _eigenspaces_by_power_iteration(A::Hecke.Generic.Mat{T} where T <: padi
             push!(spaces, invariant_blocks[i])
         else
             # Recursive call
-            E = _eigenspaces_by_classical(X)
+            E = _eigenspaces_by_power_iteration(X)
 
-            for i = 1:length(E.values)
-                push!(values, E.values[i])
-                push!(spaces, E.spaces[i])
+            #merge
+            for j = 1:length(E.spaces)
+                push!(values, E.values[j])
+                push!(spaces, invariant_blocks[i]*E.spaces[j])
             end
+            
+            # for i = 1:length(E.values)
+            #     push!(values, E.values[i])
+            #     push!(spaces, E.spaces[i])
+            # end
             
         end
         
