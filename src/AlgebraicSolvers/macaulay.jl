@@ -4,18 +4,18 @@ using LinearAlgebra
 using DynamicPolynomials
 
 function is_not_homogeneous(p)
-    L = [degree(t) for t in p]
+    L = [total_degree(t) for t in Hecke.terms(p)]
     return maximum(L) != minimum(L)
 end
 
 
 # Creates the macaulay matrix of the polynomial system P.
 function macaulay_mat(P, L::AbstractVector, X, ish = false )
-    d = maximum([degree(m) for m in L])
+    d = maximum([total_degree(m) for m in L])
     if ish
-        Q = [monomials_of_degree(X,d-degree(P[i])) for i in 1:length(P)]
+        Q = [monomials_of_degree(X,d-total_degree(P[i])) for i in 1:length(P)]
     else
-        Q = [monomials_of_degree(X,0:d-degree(P[i])) for i in 1:length(P)]
+        Q = [monomials_of_degree(X,0:d-total_degree(P[i])) for i in 1:length(P)]
     end
 
     ### this looks like it can be optimized a bit.
@@ -61,9 +61,10 @@ end
 # X   -- variables in the polynomial system
 # rho -- monomial degree of the system. Default is the macaulay degree.
 #
-function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 1, test_mode=false )
+function solve_macaulay(P, X, rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1, test_mode=false )
     println()
-    println("-- Degrees ", map(p->degree(p),P))
+    println("-- Degrees ", map(p->total_degree(p),P))
+    
     ish = !any(is_not_homogeneous, P)
     println("-- Homogeneity ", ish)
     if ish
@@ -112,7 +113,7 @@ function solve_macaulay(P, X, rho =  sum(degree(P[i])-1 for i in 1:length(P)) + 
 
     if test_mode
         println("TESTING MODE: Computation incomplete. Returning partial result.")
-        return M, F, B, N, Nr, R
+        return M, F, B, N, Nr, R, IdL0, Idx
     end
 
     Xi = normalized_simultaneous_eigenvalues(M,ish)

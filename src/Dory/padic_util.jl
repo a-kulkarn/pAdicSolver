@@ -243,6 +243,10 @@ function padic_qr(A::Hecke.Generic.MatElem{padic}; col_pivot=Val{false})
         end
     end
 
+    # Perform a last column pivot in case the corner entry is 0.
+    #
+    # ...
+    
     @assert iszero(A[P,Pcol] - L*Umat)
     
     return QRPadicPivoted(L,Umat,P,Pcol)

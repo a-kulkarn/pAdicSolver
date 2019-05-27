@@ -32,7 +32,9 @@ end
 """
     Given a coefficient ring, which is a subtype of NCRing, return the AbstractAlgebra
 """
-function AAPolynomialRing(coeff_ring::T where T <: AbstractAlgebra.NCRing, X::Array{DynPoly.PolyVar{B},1} where B )
+function AAPolynomialRing(coeff_ring::T where T <: AbstractAlgebra.NCRing,
+                          X::Array{DynPoly.PolyVar{B},1} where B )
+    
     return PolynomialRing(coeff_ring, [string(x) for x in X])
 end
 

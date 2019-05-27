@@ -1,13 +1,20 @@
 
 # NOTE: Probably should be moved to "Dory" at some point.
 
+export monomials_of_degree
+
+## Very! unstable function. This should be improved.
+function Hecke.coeff(f :: Hecke.MPolyElem{T}, m :: Hecke.MPolyElem{T}) where T
+    return Hecke.coeff(f, exponent_vector(m,1))
+end
+
 # Return the monomials in the variables specified by X of degrees
 # given by itr. itr can either be a list, iterator, or a single number.
-function monomials_of_degree(X,itr)
+function monomials_of_degree(X::Vector{S} where S <: Hecke.MPolyElem{T} where T  ,itr)
     return vcat([monomials_of_degree(X,d) for d in itr]...)
 end
 
-function monomials_of_degree(X,d::Int64)
+function monomials_of_degree(X::Vector{S} where S <: Hecke.MPolyElem{T} where T ,d::Int64)
 
     if isempty(X)
         error("Variables required in input")
@@ -34,6 +41,16 @@ function monomials_of_degree(X,d::Int64)
     end
     return vcat(all_monomials...)
 end
+
+function monomials_of_degree(R::Hecke.MPolyRing{T} where T, ds)
+    X = gens(R)
+    return monomials_of_degree(X,ds)
+end
+
+# import Hecke.degree
+# function Hecke.degree(f::Hecke.MPolyElem{T} where T)
+#     return total_degree(f)
+# end
 
 # TODO: Make a projective version of this
 function dense_coefficients(f)
