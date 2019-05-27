@@ -16,8 +16,11 @@ end
 # dispatch to the p-adic qr utilities
 import LinearAlgebra.qr
 function qr(A :: Array{padic,2}, pivot=Val(true))
-    F = padic_qr(matrix(A))
-    return QRPadicArrayPivoted(F.Q.entries, F.R.entries, F.p)
+
+    F = padic_qr(matrix(A), col_pivot=pivot)
+
+    # Need to deal with column pivoting.
+    return QRPadicArrayPivoted(F.Q.entries[Dory.inverse_permutation(F.p),:], F.R.entries, F.q)
 end
 
 # modify the norm function to make sense
@@ -64,6 +67,9 @@ function normalized_simultaneous_eigenvalues(
         for i in 1:length(eigen_subspaces.spaces)
             
             V = eigen_subspaces.spaces[i]
+
+            println(modp.(V))
+            
             Y = rectangular_solve(V,I0*M[j]*V)           
             X[i,j] = trace(Y)/Qp(size(Y,2))
         end

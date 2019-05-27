@@ -4,12 +4,12 @@ using Dory
 using AlgebraicSolvers
 
 
-function raw_sol_test(P,sol)
-    return [p(X=>sol.entries[i,2:size(sol,2)]) for i in 1:size(sol,1),  p in P]
-end
+# function raw_sol_test(P,sol)
+#     return [p(sol.entries[i,2:size(sol,2)]) for i in 1:size(sol,1),  p in P]
+# end
 
 function rel_error(P,sol)
-    return [p(X=>sol.entries[i,:]) for i in 1:size(sol,1),  p in P]
+    return [evaluate(p, sol.entries[i,:]) for i in 1:size(sol,1),  p in P]
 end
 
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
@@ -22,7 +22,7 @@ end
 R, (x1,x2) = PolynomialRing(Qp, ["x1", "x2"])
 n = length(gens(R))
 
-d = 4
+d = 2
 M = AlgebraicSolvers.monomials_of_degree(gens(R),0:d)
 s = length(M)
 
@@ -33,7 +33,7 @@ failed_test_count = 0
         #P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
         P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
-        #matlist, F, B, N, Nr, RR, IdL0, IdL = solve_macaulay(P,gens(R), 5, true);
+        matlist, F, B, N, Nr, RR, IdL0, IdL = solve_macaulay(P,gens(R), test_mode=true);
         sol = solve_macaulay(P, gens(R))
 
         println("\n-- sol ")

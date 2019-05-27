@@ -61,7 +61,7 @@ end
 # X   -- variables in the polynomial system
 # rho -- monomial degree of the system. Default is the macaulay degree.
 #
-function solve_macaulay(P, X, rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1, test_mode=false )
+function solve_macaulay(P, X; rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1, test_mode=false )
     println()
     println("-- Degrees ", map(p->total_degree(p),P))
     
@@ -134,6 +134,6 @@ end
 
 # Dispatcher for doing the right iwasawa algorithm
 function iwasawa_step(N :: Array{padic,2} , IdL0)
-    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
+    F = qr( Array(transpose(N[IdL0,:])), Val(true))
     return F, N*inv(matrix(parent(N[1,1]), Array(transpose(F.Q)))).entries
 end
