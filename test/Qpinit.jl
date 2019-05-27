@@ -16,19 +16,23 @@ Qp = PadicField(7,30)
 
 # A = matrix(Qp, entarr)
 
+A = matrix([[Qp(1)];])
 
+E = eigspaces(A)
 
-for i=1:10
+display(E)
 
-    A = random_test_matrix(Qp,50)
-    @time X,V = Dory.block_schur_form(A)
-    @assert iszero(X*V - V*A)
+# for i=1:10
 
-    display(factor(charpoly(modp.(A))))
-    #display(valuation.(X))
-    println()
+#     A = random_test_matrix(Qp,50)
+#     @time X,V = Dory.block_schur_form(A)
+#     @assert iszero(X*V - V*A)
 
-end 
+#     display(factor(charpoly(modp.(A))))
+#     #display(valuation.(X))
+#     println()
+
+# end 
 
     
 # @assert iszero(inv(V)*X*V - A)

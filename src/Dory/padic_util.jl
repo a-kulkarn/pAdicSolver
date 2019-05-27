@@ -957,7 +957,7 @@ The default is "inverse", since at the moment this is the one that is implemente
 function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="power")
 
     ## Input sanitization    
-    if size(A)[1] != size(A)[2]
+    if size(A,1) != size(A,2)
         error("Input matrix must be square.")
     end
 
@@ -966,9 +966,12 @@ function eigspaces(A::Hecke.Generic.Mat{T} where T <: padic; method="power")
 
     
     if iszero(A)        
-        return EigenSpaceDec(Qp, [zero(Qp)] , [identity_matrix(Qp, size(A)[1])] )
+        return EigenSpaceDec(Qp, [zero(Qp)] , [identity_matrix(Qp, size(A,1))] )
+    elseif  size(A,1) == 1
+        return EigenSpaceDec(Qp, [A[1,1]] , [identity_matrix(Qp, size(A,1))] )
     end
 
+    # Dispatch
     if method == "classical"
         error("Not Implemented")
         
