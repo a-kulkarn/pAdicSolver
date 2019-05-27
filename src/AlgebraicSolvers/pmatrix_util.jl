@@ -13,14 +13,6 @@ struct QRPadicArrayPivoted
 end
 
 
-# dispatch to the p-adic qr utilities
-import LinearAlgebra.qr
-function qr(A :: Array{padic,2}, pivot=Val(true))
-    
-    F = padic_qr(matrix(A), col_pivot=pivot)
-    return QRPadicArrayPivoted(F.Q.entries[Dory.inverse_permutation(F.p),:], F.R.entries, F.q)
-end
-
 # modify the norm function to make sense
 import LinearAlgebra.norm
 norm(A :: Array{padic,1}) = maximum( abs.(A))
