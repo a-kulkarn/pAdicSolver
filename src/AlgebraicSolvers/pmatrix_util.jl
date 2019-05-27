@@ -16,10 +16,8 @@ end
 # dispatch to the p-adic qr utilities
 import LinearAlgebra.qr
 function qr(A :: Array{padic,2}, pivot=Val(true))
-
+    
     F = padic_qr(matrix(A), col_pivot=pivot)
-
-    # Need to deal with column pivoting.
     return QRPadicArrayPivoted(F.Q.entries[Dory.inverse_permutation(F.p),:], F.R.entries, F.q)
 end
 
@@ -41,20 +39,13 @@ function normalized_simultaneous_eigenvalues(
     Qp = base_ring(M[1])
     M0 = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
-    #I0 = inv(M0)  # Catastrophic precision loss in this step causes issues in Eigensolver.
-
     println("Valuations of singular values: ")
     println(valuation.(singular_values(M0)))
     
     @time I0 = rectangular_solve(M0,identity_matrix(M0.base_ring,size(M0,1)))
-
-    #@assert iszero(M0*I0 - identity_matrix(M0.base_ring,size(M0,1)))
-    
     @time Mg = I0*M[1]
     
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-    #
-    # NOTE: right now eigvecs sometimes returns an invariant subspace instead.
     eigen_subspaces  = eigspaces(Mg)
     
     #println("eigvalues: ", invariant_subspaces.values)
@@ -66,10 +57,7 @@ function normalized_simultaneous_eigenvalues(
     for j in 1:length(M)
         for i in 1:length(eigen_subspaces.spaces)
             
-            V = eigen_subspaces.spaces[i]
-
-            println(modp.(V))
-            
+            V = eigen_subspaces.spaces[i]            
             Y = rectangular_solve(V,I0*M[j]*V)           
             X[i,j] = trace(Y)/Qp(size(Y,2))
         end

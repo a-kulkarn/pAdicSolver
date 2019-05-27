@@ -37,7 +37,7 @@ display(E)
     
 # @assert iszero(inv(V)*X*V - A)
 
-# vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
+ vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
 
 # E = Dory._eigenspaces_by_power_iteration(A)
 

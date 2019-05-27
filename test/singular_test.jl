@@ -22,18 +22,17 @@ end
 R, (x1,x2) = PolynomialRing(Qp, ["x1", "x2"])
 n = length(gens(R))
 
-d = 2
+d = 10
 M = AlgebraicSolvers.monomials_of_degree(gens(R),0:d)
 s = length(M)
 
 failed_test_count = 0
-#for i=1:10
-
+for i=1:10
     #try
         #P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
-        P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
+        global P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
-        matlist, F, B, N, Nr, RR, IdL0, IdL = solve_macaulay(P,gens(R), test_mode=true);
+        #matlist, F, B, N, Nr, RR, IdL0, IdL = solve_macaulay(P,gens(R), test_mode=true);
         sol = solve_macaulay(P, gens(R))
 
         println("\n-- sol ")
@@ -47,7 +46,7 @@ failed_test_count = 0
     #    global failed_test_count += 1
     #end
 
-#end
+end
 
 println("----------------------")
 println("Tests failed due to stability issues (probably): ", failed_test_count)

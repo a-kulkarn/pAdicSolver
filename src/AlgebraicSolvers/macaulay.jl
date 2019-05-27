@@ -133,7 +133,21 @@ end
 
 
 # Dispatcher for doing the right iwasawa algorithm
+"""
+    iwasawa_step
+
+    Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
+    together with  Nr = N*inv(inv(P)Q)^T.
+"""
+
 function iwasawa_step(N :: Array{padic,2} , IdL0)
-    F = qr( Array(transpose(N[IdL0,:])), Val(true))
-    return F, N*inv(matrix(parent(N[1,1]), Array(transpose(F.Q)))).entries
+    
+    F = padic_qr( transpose(matrix(N[IdL0,:])) , col_pivot=Val(true))
+    Qinv = Dory.inv_unit_lower_triangular(F.Q)
+    Fpinv= Dory.inverse_permutation(F.p)
+
+    X = Qinv[Fpinv,:].entries    
+    Farr = QRPadicArrayPivoted( (F.Q.entries)[Fpinv,:], F.R.entries, F.q)
+    
+    return Farr, N*X
 end
