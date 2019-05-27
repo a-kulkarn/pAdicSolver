@@ -758,7 +758,14 @@ function power_iteration_decomposition(A, Amp)
             B = B^2
         end
 
-        _,V = nullspace(B)
+        nu,V = nullspace(B)
+
+        if nu == 0
+            display( valuation.(singular_values(A)) )
+            display( valuation.(singular_values(B)) )
+            error("Matrix 'B' is invertible. Iteration did not converge.")
+        end
+        
         X = rectangular_solve(V, A*V, stable=true)
         
         # Append refined data to the main list.
@@ -777,7 +784,7 @@ end
 ###############################################################################
 
 function _eigenspaces_by_classical(A)
-    error("Classical Algorithm not implemented in Julia. Progress is being made on prerequisite interfaces...")
+    error("Classical Algorithm not implemented in Julia. I invite the brave to implement the Zaussenhaus Round-4 algorithm.")
 end
 
 ###############################################################################
@@ -1023,7 +1030,7 @@ function _eigenspaces_by_inverse_iteration(A::Hecke.Generic.Mat{T} where T <: pa
     end
 
     # Iteration call
-    values_lift, spaces_lift = inverse_iteration_decomposition(A, Amp)
+    values_lift, spaces_lift = inverse_iteration_decomposition(Aint, Amp)
 
     return EigenSpaceDec(Qp, values_lift, spaces_lift)
     
@@ -1044,16 +1051,16 @@ function _eigenspaces_by_power_iteration(A::Hecke.Generic.Mat{T} where T <: padi
     end
 
     # Check to ensure chiAp is not an n-th power
-    if length(factors_chiAp) == 1 && values(factors_chiAp)[1] == size(A,1)
+    if length(factors_chiAp) == 1 && Base.values(collect(factors_chiAp.fac))[1] == size(A,1)
         _eigenspaces_by_classical(A)
     end
 
     # Iteration call
-    restricted_maps, invariant_blocks = power_iteration_decomposition(A, Amp)
+    restricted_maps, invariant_blocks = power_iteration_decomposition(Aint, Amp)
 
     # Postprocessing
     values = fill(zero(Qp), 0)
-    spaces = fill(zero(parent(A)), 0)    
+    spaces = fill(zero(parent(Aint)), 0)    
     
     for i = 1:length(restricted_maps)
 
@@ -1121,3 +1128,17 @@ function one_iteration(A,Q,shift)
     return U*inv(P)*L + eI, Q*inv(P)*L
 end
 
+# Print the valuations of the main/sub diagonal.
+function block_data(A)
+
+    n = size(A,2)
+    data = Array{Any,2}(nothing, 2, n)
+    
+    for i=1:n-1
+        data[:,i] = valuation.([A[i,i], A[i+1,i]])
+    end
+
+    data[:,n] = [valuation(A[n,n]), nothing]
+    
+    return data
+end

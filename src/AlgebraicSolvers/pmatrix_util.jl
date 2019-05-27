@@ -25,7 +25,7 @@ norm(A :: Array{padic,1}) = maximum( abs.(A))
 # INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
 # Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 function normalized_simultaneous_eigenvalues(
-    inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool)
+    inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
 
     M = [ matrix(A) for A in inputM]
     Qp = base_ring(M[1])
@@ -38,7 +38,7 @@ function normalized_simultaneous_eigenvalues(
     @time Mg = I0*M[1]
     
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-    eigen_subspaces  = eigspaces(Mg)
+    eigen_subspaces  = eigspaces(Mg, method=method)
     
     #println("eigvalues: ", invariant_subspaces.values)
     #println()

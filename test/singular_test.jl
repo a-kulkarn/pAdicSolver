@@ -4,26 +4,15 @@ using Dory
 using AlgebraicSolvers
 
 
-# function raw_sol_test(P,sol)
-#     return [p(sol.entries[i,2:size(sol,2)]) for i in 1:size(sol,1),  p in P]
-# end
-
-function rel_error(P,sol)
-    return [evaluate(p, sol.entries[i,:]) for i in 1:size(sol,1),  p in P]
-end
-
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
 Qp = PadicField(491,3)
-function Base.zero(X::Type{padic})
-    return Qp(0)
-end
 
 
 R, (x1,x2) = PolynomialRing(Qp, ["x1", "x2"])
 n = length(gens(R))
 
 d = 10
-M = AlgebraicSolvers.monomials_of_degree(gens(R),0:d)
+M = monomials_of_degree(gens(R),0:d)
 s = length(M)
 
 failed_test_count = 0

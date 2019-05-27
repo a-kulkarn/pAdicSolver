@@ -103,6 +103,11 @@ find_nemo_mat(::Any, rest) = find_nemo_mat(rest)
 
 #### end broadcast interface.
 
+
+###################################################################
+#  Conveinence Interface
+###################################################################
+
 function Base.getindex(A::Hecke.Generic.Mat{T} where T, koln::Colon, I::Array{Int64,1})
     return matrix(A.base_ring, A.entries[koln,I])
 end
@@ -136,6 +141,18 @@ function Hecke.matrix(A::Array{T,2} where T <: Hecke.NCRingElem)
     @assert reduce(==, [parent(x) for x in A]) 
     return matrix(parent(A[1,1], A))
 end
+
+function Hecke.matrix(A::Array{Array{T,1},1} where T <: Hecke.NCRingElem)
+    return matrix( hcat(A...) )
+end
+
+function Hecke.matrix(R, A::Array{Array{T,1},1} where T <: Hecke.NCRingElem)
+    return matrix( R, hcat(A...) )
+end
+
+# Conversion to Julia matrices.
+# ...
+
 
 import Base./
 function /(A :: Hecke.Generic.Mat{T}, x::T)  where T

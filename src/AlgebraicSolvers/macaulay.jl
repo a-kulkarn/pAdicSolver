@@ -60,8 +60,13 @@ end
 # P   -- polynomial system
 # X   -- variables in the polynomial system
 # rho -- monomial degree of the system. Default is the macaulay degree.
+# eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
 #
-function solve_macaulay(P, X; rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1, test_mode=false )
+function solve_macaulay(P, X;
+                        rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                        eigenvector_method="power",
+                        test_mode=false )
+    
     println()
     println("-- Degrees ", map(p->total_degree(p),P))
     
@@ -116,7 +121,7 @@ function solve_macaulay(P, X; rho =  sum(total_degree(P[i])-1 for i in 1:length(
         return M, F, B, N, Nr, R, IdL0, Idx
     end
 
-    Xi = normalized_simultaneous_eigenvalues(M,ish)
+    Xi = normalized_simultaneous_eigenvalues(M,ish, eigenvector_method)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
 
     # In the affine system, the distinguished monomial (i.e, "1" for that case) does not correspond

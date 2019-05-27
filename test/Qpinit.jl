@@ -1,7 +1,5 @@
 
 
-
-
 Qp = PadicField(7,30)
 
 
@@ -16,19 +14,14 @@ Qp = PadicField(7,30)
 
 # A = matrix(Qp, entarr)
 
-A = matrix([[Qp(1)];])
-
-E = eigspaces(A)
-
-display(E)
 
 # for i=1:10
 
-#     A = random_test_matrix(Qp,50)
+     A = random_test_matrix(Qp,50)
 #     @time X,V = Dory.block_schur_form(A)
 #     @assert iszero(X*V - V*A)
 
-#     display(factor(charpoly(modp.(A))))
+     display(factor(charpoly(modp.(A))))
 #     #display(valuation.(X))
 #     println()
 
