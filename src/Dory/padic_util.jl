@@ -365,7 +365,7 @@ function svd(A::Hecke.Generic.MatElem{padic})
     return SVDPadic(U,S,Vt,F.p,F.q)
 end
 
-# stable version of nullspace for padic matrices.
+# stable version of rank for padic matrices.
 function rank(A::Hecke.MatElem{padic})
     n = nrows(A)
     m = ncols(A)
@@ -408,6 +408,16 @@ function nullspace(A::Hecke.MatElem{padic})
     Qinvt = transpose(Q)[Pinv,:]
     
     return length(col_list) + max(0,n-m), hcat(Qinvt[:, col_list], Qinvt[:,(m+1):n])
+end
+
+# stable version of inverse for p-adic matrices
+import Hecke.inv
+function inv(A::Hecke.MatElem{padic})
+    if size(A,1) != size(A,2)
+        error("Matrix must be square.")
+    end
+    id = identity_matrix(A.base_ring, size(A,2))
+    return rectangular_solve(A, id)
 end
 
 function inv_unit_lower_triangular!(L::Hecke.Generic.MatElem{T} where T)
@@ -1051,16 +1061,17 @@ function _eigenspaces_by_power_iteration(A::Hecke.Generic.Mat{T} where T <: padi
 
     factor_multiplicities = collect(Base.values(factors_chiAp.fac))
 
-    println(Amp)
-    
-    println(factor_multiplicities)
+    #println(Amp)    
+    #println(factor_multiplicities)
     
     # Check to ensure chiAp is not an n-th power
     if length(factors_chiAp) == 1 && factor_multiplicities[1] == size(A,1)
         return try
             _eigenspaces_by_classical(A)
         catch e
-            println("Classical Algorithm not implemented. Skipping this eigenvalue...")
+            println()
+            println("WARNING: Classical Algorithm not implemented. Skipping this eigenvalue...")
+            println()
             EigenSpaceDec(Qp, empty_array , empty_spaces_array )
         end
     end
@@ -1071,8 +1082,6 @@ function _eigenspaces_by_power_iteration(A::Hecke.Generic.Mat{T} where T <: padi
     # Postprocessing
     values = fill(zero(Qp), 0)
     spaces = fill(zero(parent(Aint)), 0)    
-
-    println(length(restricted_maps))
     
     for i = 1:length(restricted_maps)
 

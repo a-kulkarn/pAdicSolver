@@ -29,14 +29,16 @@ function normalized_simultaneous_eigenvalues(
 
     M = [ matrix(A) for A in inputM]
     Qp = base_ring(M[1])
-    M0 = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
+    Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
     println("Valuations of singular values: ")
-    println(valuation.(singular_values(M0)))
+    println(valuation.(singular_values(M[1])))
 
+    # We will assume that M[1] is well-conditioned. for now.
+    
     # The rectangular solve step is enough to kill off any helpful data mod p.
-    @time I0 = rectangular_solve(M0,identity_matrix(M0.base_ring,size(M0,1)))
-    @time Mg = I0*M[1]
+    @time I0 = rectangular_solve(M[1],identity_matrix(Mrand.base_ring,size(M[1],1)))
+    @time Mg = I0*Mrand
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     eigen_subspaces  = eigspaces(Mg, method=method)
