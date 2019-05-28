@@ -27,6 +27,10 @@ norm(A :: Array{padic,1}) = maximum( abs.(A))
 function normalized_simultaneous_eigenvalues(
     inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
 
+    if method == "schur" || method == "qr" || method == "tropical"
+        return nse_schur(inputM, ish, method)
+    end
+    
     M = [ matrix(A) for A in inputM]
     Qp = base_ring(M[1])
     Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
@@ -83,4 +87,111 @@ function normalized_simultaneous_eigenvalues(
     end
     
     return normalize_solution!(X, ish)
+end
+
+
+function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
+    
+    M = [ matrix(A) for A in inputM]
+    Qp = base_ring(M[1])
+    Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
+
+    println("Valuations of singular values: ")
+    println(valuation.(singular_values(M[1])))
+
+    # We will assume that M[1] is well-conditioned. for now.
+    
+    # The rectangular solve step is enough to kill off any helpful data mod p.
+    @time I0 = inv(M[1])
+    @time Mg = I0*M[2]
+
+    # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
+    X, V = Dory.block_schur_form(Mg)
+    
+    #println("eigvalues: ", invariant_subspaces.values)
+    #println()
+    #println("eigspaces: ", length(invariant_subspaces.spaces))
+
+    if method != "tropical"
+        sol_array = Array{Array{padic,1},1}()
+        for j in 1:length(M)
+
+            # Put the other matrix into schur form
+            Y= inv(V)*(I0*M[j])*V
+            
+            for i=1:size(X,2)
+                if (i==1 && iszero(X[i,i+1])) ||
+                    (i==size(X,2) && iszero(X[i-1,i]) ) ||
+                    (iszero(X[i,i-1]) && iszero(X[i+1,i]))
+                    
+                    push!(sol_array[j], Y[i,i])
+                end
+            end
+        end
+        return normalize_solution(Xi, ish)
+    end
+
+    if method == "tropical"
+        sol_array = Array{Array{Number,1},1}()
+        display(valuation.(X))
+        
+        for j in 1:length(M)
+
+            # Put the other matrix into schur form
+            ycoords = Array{Number,1}()
+            Y= V*(I0*M[j])*inv(V)
+            block_start_index = 1
+
+            display(valuation.(Y))
+            
+            for i=1:size(X,2)
+                if (i == size(X,2) || iszero(X[i+1,i]))
+                    
+                    block_inds = block_start_index:i
+
+                    # This is not quite right, since there could be cancellation in larger blocks.
+                    block_trace = sum( Y[r,r] for r in block_inds ) / X.base_ring(length(block_inds))
+                    push!( ycoords, [Dory.valuation(block_trace) for r in block_inds]...)
+
+                    block_start_index = i+1
+                end                
+            end
+            push!(sol_array, ycoords)
+        end
+
+        if !ish
+
+        else
+            error("Tropical mode not implemented for projective systems.")
+        end
+        #return hcat( sol_array[2:length(sol_array)]...)
+        return hcat( sol_array...)
+    end
+    
+    function normalize_solution!(Xi, ish)
+        Sol = Xi
+        
+        if (!ish)
+            i=1            
+            while i <= size(Sol,1)
+                scale_factor = Sol[i,1]
+                if iszero(scale_factor)
+                    println()
+                    println("!-- Ignoring solution at infinity --!")
+                    println()
+                    
+                    Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
+                else
+                    Sol[i,:] *= inv(scale_factor)
+                    i+=1
+                end
+            end
+        #else
+            # do nothing otherwise, for now.
+        end
+        return Sol
+    end
+    
+    return normalize_solution!(X, ish)
+    
 end
