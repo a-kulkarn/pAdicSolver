@@ -133,7 +133,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
     if method == "tropical"
         sol_array = Array{Array{Number,1},1}()
-        display(valuation.(X))
+        #display(valuation.(X))
         
         for j in 1:length(M)
 
@@ -142,7 +142,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
             Y= V*(I0*M[j])*inv(V)
             block_start_index = 1
 
-            display(valuation.(Y))
+            #display(valuation.(Y))
             
             for i=1:size(X,2)
                 if (i == size(X,2) || iszero(X[i+1,i]))
