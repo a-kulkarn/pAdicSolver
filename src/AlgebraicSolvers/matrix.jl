@@ -130,7 +130,7 @@ end
 # end
 
 function is_divisible_by_x0(m)
-    return degree(gcd(m, gens(parent(m))[1])) > 0
+    return total_degree(gcd(m, gens(parent(m))[1])) > 0
 end
 
 # Figure out what L0 should be

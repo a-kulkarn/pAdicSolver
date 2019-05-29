@@ -27,15 +27,4 @@ eqns = vcat(minors(A, 3), [h1, h2]);
 
 
 
-X = @Ring y1  y2  y3  y4  y5  y6  y7  y8  y9  y10  y11  y12
-n = length(X)
-
-
-D = Dict( zip( AlgebraicSolvers.DPmonomials(X,1) , gens(R)) )
-
-
-AAPolynomial(0*(y1+y2), R; var_assignment=D)
-
-
-
 
