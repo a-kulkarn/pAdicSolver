@@ -34,11 +34,6 @@ end
 # returns a matrix of coefficients corresponding to the
 # monomial basis.
 #
-# AVI: Multivariate polynomials has a "coefficients" function.
-# Should simplify this function a bit.
-#
-# AVI: The t.\alpha is the coefficient of the term.
-#
 # L -- list of monomials
 #import MultivariatePolynomials.coefficients
 function coefficient_matrix(P::Vector, L)
@@ -47,14 +42,12 @@ end
 
 
 
-# AVI: Main solver function, for us anyways.
+# Main solver function, for us anyways.
 # calls to:
 # macaulay_mat
 # qr_basis
 # mult_matrix
 # eigdiag
-#------------
-# call to the qr intrinsic uses float (not p-adic) arithmetic.
 #-------------------
 # INPUTS:
 # P   -- polynomial system
