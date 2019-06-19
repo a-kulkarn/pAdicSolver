@@ -4,7 +4,9 @@ module Dory
 ## NOTE: It is possible to resolve the impending namespace conflict for the names of linear algebra functions
 # via conditional importing (see https://github.com/mikeInnes/Requires.jl). For now, we put the burden of use on the user if they want to use both packages at the same time.
 
-# Functions with the same name as LinearAlgebra
+## In general, the issue is a Julia developer desicion. See https://discourse.julialang.org/t/function-name-conflict-adl-function-merging/10335/30
+
+# Functions with the same name as LinearAlgebra functions.
 #
 #import LinearAlgebra.eigvecs
 #import LinearAlgebra.svd
