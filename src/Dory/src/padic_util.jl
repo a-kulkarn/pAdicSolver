@@ -26,12 +26,12 @@ function /(x::padic,y::padic) return x//y end
 # Note: there may be issues if Hecke depends on the
 # valuation being non-infinite.
 #
-function valuation(x::padic)
-    if iszero(x)
-        return Inf
-    end
-    return Int64(x.v)
-end
+# function valuation(x::padic)
+#     if iszero(x)
+#         return Inf
+#     end
+#     return Int64(x.v)
+# end
 
 # typesafe version
 function float64_valuation(x::padic)
@@ -348,7 +348,6 @@ struct SVDPadic
 end
 
 # A padic analogue for svd
-import LinearAlgebra.svd
 function svd(A::Hecke.Generic.MatElem{padic})
 
     F = padic_qr(A, col_pivot=Val(true))

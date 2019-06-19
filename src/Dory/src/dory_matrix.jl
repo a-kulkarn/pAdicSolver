@@ -249,7 +249,6 @@ function _spacecat(E::EigenSpaceDec)
 end
 
 # See usual eigvecs
-import LinearAlgebra.eigvecs
 function eigvecs(A::Hecke.Generic.MatElem{T}) where T
     return _spacecat(eigspaces(A))
 end
@@ -257,16 +256,6 @@ end
 # See usual eigvals
 function eigvals(A::Hecke.Generic.MatElem{T}) where T
     return eigen(A).values
-end
-
-"""
-charpoly(A::nmod_mat)
-
-Returns the characteristic polynomial of A.
-"""
-function charpoly(A::Hecke.Generic.MatElem{T}) where T
-    R,_ = PolynomialRing(A.base_ring)
-    return charpoly(R, A)
 end
 
 
