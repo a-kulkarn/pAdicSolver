@@ -1,0 +1,16 @@
+ Resolving package versions...
+  Updating `/net/stdell/people7/avinash/pAdicSolver/Project.toml`
+  [7810ee48] + Dory v0.1.0 [`/net/stdell/people7/avinash/pAdicSolver/deps/../Dory`]
+  Updating `/net/stdell/people7/avinash/pAdicSolver/Manifest.toml`
+  [c3fe647b] + AbstractAlgebra v0.5.0
+  [b99e7846] + BinaryProvider v0.5.4
+  [7810ee48] + Dory v0.1.0 [`/net/stdell/people7/avinash/pAdicSolver/deps/../Dory`]
+  [3e1990a7] + Hecke v0.6.2
+  [2edaba10] + Nemo v0.14.0
+  [8ba89e20] + Distributed 
+  [8f399da3] + Libdl 
+  [37e2e46d] + LinearAlgebra 
+  [56ddb016] + Logging 
+  [9abbd945] + Profile 
+  [2f01184e] + SparseArrays 
+  [8dfed614] + Test 
