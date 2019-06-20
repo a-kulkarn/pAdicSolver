@@ -7,8 +7,10 @@ import Pkg
 
 println("Building...")
 
-try Pkg.installed("Dory")
+# Search the installed package list for Dory. If it isn't there, install it.
+try Pkg.installed()["Dory"]
 catch
     Pkg.activate("$(@__DIR__)/..")
-    Pkg.develop(Pkg.PackageSpec(path="$(@__DIR__)/../Dory"))    
+    Pkg.develop(Pkg.PackageSpec(path="$(@__DIR__)/../Dory"))
+    Pkg.resolve()
 end
