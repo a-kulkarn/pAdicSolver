@@ -1,6 +1,4 @@
 
-push!(LOAD_PATH, "$(@__DIR__)/../Dory/src/")
-
 module pAdicSolver
 
   using MultivariatePolynomials

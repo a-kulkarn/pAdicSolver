@@ -4,4 +4,5 @@ authors = ["Avi Kulkarni <avinash@mis.mpg.de>"]
 version = "0.1.0"
 
 [deps]
+Dory = "7810ee48-929a-11e9-02ca-05eb922bb063"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
