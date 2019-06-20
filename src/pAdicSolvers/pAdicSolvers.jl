@@ -1,5 +1,5 @@
 
-module AlgebraicSolvers
+module pAdicSolvers
 
   using MultivariatePolynomials
   using DynamicPolynomials
