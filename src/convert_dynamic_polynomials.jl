@@ -1,4 +1,5 @@
 
+using AbstractAlgebra
 
 export @Ring
 macro Ring(args...)

@@ -3,7 +3,7 @@
 
 using Hecke
 using Dory
-using AlgebraicSolvers
+using pAdicSolver
 
 
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.

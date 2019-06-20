@@ -3,8 +3,6 @@ module pAdicSolver
 
   using MultivariatePolynomials
   using DynamicPolynomials
-  using AbstractAlgebra
-  using Nemo
   using Hecke
   using Dory
 
@@ -16,7 +14,6 @@ module pAdicSolver
 
   Base.one(X::Vector{PolyVar{true}}) = monomials(X,0)[1]
 
-  include("polynomial_ext.jl")
   include("convert_dynamic_polynomials.jl")
   include("mindex.jl")
   include("matrix.jl")
