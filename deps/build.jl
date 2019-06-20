@@ -1,3 +1,8 @@
 
-# Update the load path so Julia can find Dory inside the repo.
-push!(LOAD_PATH, "$(@__DIR__)/../Dory/src/")
+# Auto-install Dory just in case.
+import Pkg
+try
+    Pkg.installed()["Dory"]
+catch
+    Pkg.add(Pkg.PackageSpec(url="https://github.com/a-kulkarn/Dory.git", rev="master"))
+end
