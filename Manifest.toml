@@ -25,7 +25,7 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[Dory]]
 deps = ["Distributed", "Hecke"]
-git-tree-sha1 = "2d12ea9789fee0186eb414d27573b0b8d2dfa4da"
+git-tree-sha1 = "423e6b6285e270320f9ed9c48b6c6e3c0ac6e7c8"
 repo-rev = "master"
 repo-url = "https://github.com/a-kulkarn/Dory.git"
 uuid = "7810ee48-929a-11e9-02ca-05eb922bb063"
