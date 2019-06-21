@@ -3,7 +3,7 @@ module pAdicSolver
 
   using MultivariatePolynomials
   using DynamicPolynomials
-  using Hecke
+  using Hecke # identifier conflict probably occurs here.
   using Dory
 
   #degree = DynamicPolynomials.maxdegree
