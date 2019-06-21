@@ -1,4 +1,4 @@
-export macaulay_mat, qr_basis, solve_macaulay, coefficient_matrix
+export macaulay_mat, solve_macaulay, coefficient_matrix
 
 using LinearAlgebra
 using DynamicPolynomials
@@ -40,24 +40,38 @@ function coefficient_matrix(P::Vector, L)
 end
 
 
+## ***************************************************************************************    
+# Main solver function
 
-# Main solver function, for us anyways.
-# calls to:
-# macaulay_mat
-# qr_basis
-# mult_matrix
-# eigdiag
+    # calls to:
+    # macaulay_mat
+    # mult_matrix
+    # eigdiag
+## ***************************************************************************************
+
+"""
+    solve_macaulay(P, X;
+                        rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                        eigenvector_method="power",
+                        test_mode=false )
+
+Solve a 0-dimensional system of polynomial equations. (Presently, only over Qp)
+
 #-------------------
-# INPUTS:
-# P   -- polynomial system
-# X   -- variables in the polynomial system
-# rho -- monomial degree of the system. Default is the macaulay degree.
-# eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
-#
+
+INPUTS:
+P   -- polynomial system, a Vector of AbstractAlgebra polynomials.
+X   -- variables in the polynomial system
+rho -- monomial degree of the system. Default is the macaulay degree.
+eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
+
+"""
 function solve_macaulay(P, X;
                         rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
                         eigenvector_method="power",
                         test_mode=false )
+
+
     
     println()
     println("-- Degrees ", map(p->total_degree(p),P))
@@ -95,15 +109,14 @@ function solve_macaulay(P, X;
     # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
     #    set (here, IdL0).
     #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form
-    #    a well-conditioned
-    #    submatrix.
+    #    a well-conditioned submatrix.
     #
     # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
     #    coordinates is not important in the final step, when the eigenvalues are calulated.
     #
     F, Nr = iwasawa_step(N, IdL0)
     B = permute_and_divide_by_x0(L0, F, ish)
-    
+
     println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
 
     

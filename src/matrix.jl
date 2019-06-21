@@ -144,12 +144,11 @@ end
 
 function permute_and_divide_by_x0(L0,F,ish)
     B = []
-    m = size(F.Q,1) # rename this...
+    m = size(F.Q,1) # The dimension of the quotient algebra.
     if ish
         for i in 1:m
-            m = copy(L0[F.p[i]])
-            divexact(m, gens(parent(m))[1])
-            push!(B, m)
+            m = copy(L0[F.p[i]])            
+            push!(B, Dory.divexact(m, gens(parent(m))[1]))
             # should test if the diag. coeff. is not small
         end
     else
@@ -186,7 +185,8 @@ function mult_matrices(B, X, K, L, ish = false)
             if k != 0
                 M[i,:] = K[k,:]
             else
-                println(k,m,v) # this never appears to happen
+                println(k,m,v) # By definition of B, the lookup should never fail.
+                error("Failure to construct multiplication matrix. Likely due to bad basis.")
             end
         end
         return M

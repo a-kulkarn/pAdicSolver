@@ -1,8 +1,11 @@
 
 module pAdicSolver
 
-  using Hecke # identifier conflict probably occurs here.
+  using Hecke
   using Dory
+
+  # Add a nullspace method for pAdic arrays.
+  import Dory: nullspace
 
   include("mindex.jl")
   include("matrix.jl")
@@ -11,7 +14,5 @@ module pAdicSolver
   include("test_util.jl")
   #include("newton.jl")
   #include("toric.jl")
-
-
 
 end

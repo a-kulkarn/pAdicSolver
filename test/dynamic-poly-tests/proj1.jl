@@ -1,9 +1,9 @@
 
-X = AS.@Ring x1 x2
-n = length(X)
+X = AS.@Ring x1 x2 x3
+n = length(X)-1
 
-d = 2
-M = AS.monomials(X,0:d)
+d = 1
+M = AS.monomials(X,d)
 s = length(M)
 
 #P = [x1^2+1.0, x2^2-2.0]
