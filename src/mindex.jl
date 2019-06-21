@@ -5,12 +5,12 @@ import Base:
 export idx, rev_idx, length
 
 mutable struct MonomialIdx
-    terms::Dict{AbstractAlgebra.MPolyElem{T} where T, Int64} 
+    terms::Dict{Dory.MPolyElem{T} where T, Int64} 
 end
 
-MonomialIdx() =  MonomialIdx(Dict{AbstractAlgebra.MPolyElem{T} where T,Int64}())
+MonomialIdx() =  MonomialIdx(Dict{Dory.MPolyElem{T} where T,Int64}())
 
-get(p::MonomialIdx, m::AbstractAlgebra.MPolyElem{T} where T, df:: Int64) = get(p.terms, m, df)
+get(p::MonomialIdx, m::Dory.MPolyElem{T} where T, df:: Int64) = get(p.terms, m, df)
 
 function Base.setindex!(p::MonomialIdx, v::Int64, m)
     (p.terms)[m] = v

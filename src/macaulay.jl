@@ -92,12 +92,14 @@ function solve_macaulay(P, X;
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
 
     # The idea of the QR step is two-fold:
-    # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning set (here, IdL0).
-    #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form a well-conditioned
+    # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
+    #    set (here, IdL0).
+    #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form
+    #    a well-conditioned
     #    submatrix.
     #
-    # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of coordinates
-    #    is not important in the final step, when the eigenvalues are calulated.
+    # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
+    #    coordinates is not important in the final step, when the eigenvalues are calulated.
     #
     F, Nr = iwasawa_step(N, IdL0)
     B = permute_and_divide_by_x0(L0, F, ish)

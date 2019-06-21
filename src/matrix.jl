@@ -1,4 +1,3 @@
-export matrix, smatrix, mult_basis, mult_matrix, eigdiag, padic_eigdiag, kernel
 
 #import LinearAlgebra: nullspace
 #using SparseArrays
@@ -245,19 +244,5 @@ function normalized_simultaneous_eigenvalues(M :: Array{Array{T,2},1} where T <:
     return normalize_solution!(X, ish)
 end
 
-
-## Looks like a function for evaluating a polynomial at a vector?
-## WARNING: It allows you to evaluate at a vector that is too long...
-function (p::Polynomial{B,T})(x::Vector) where {B,T}
-   r = zero(x[1]);
-   for m in p
-      t=m.α
-      for i in 1:length(m.x.z)
-      	 t*=x[i]^m.x.z[i]
-      end
-      r+=t
-   end
-   r
-end
 
 
