@@ -1,8 +1,6 @@
 
-using Hecke
 using Dory
-using AlgebraicSolvers
-
+using pAdicSolver
 
 # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
 Qp = PadicField(491,3)
@@ -17,8 +15,7 @@ s = length(M)
 
 failed_test_count = 0
 for i=1:10
-    #try
-        #P = [ Qp(1)*x1^2 + Qp(1), Qp(1)*x2^2- Qp(2)*2]
+    try
         global P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
         #matlist, F, B, N, Nr, RR, IdL0, IdL = solve_macaulay(P,gens(R), test_mode=true);
@@ -31,10 +28,9 @@ for i=1:10
         println("-- Rel error: ")
         display(Er)
         println()
-    #catch
-    #    global failed_test_count += 1
-    #end
-
+    catch
+        global failed_test_count += 1
+    end
 end
 
 println("----------------------")

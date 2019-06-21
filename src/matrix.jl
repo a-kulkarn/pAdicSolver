@@ -1,6 +1,6 @@
-export matrix, smatrix, mult_basis, mult_matrix, eigdiag, padic_eigdiag, kernel, rel_error
+export matrix, smatrix, mult_basis, mult_matrix, eigdiag, padic_eigdiag, kernel
 
-import LinearAlgebra: nullspace
+#import LinearAlgebra: nullspace
 #using SparseArrays
 
 #=
@@ -164,7 +164,6 @@ end
     
 
 
-# AVI:
 # INPUTS:
 #  B -- basis for QR factorization
 #  X -- variables for the polynomial ring
@@ -198,7 +197,6 @@ function mult_matrices(B, X, K, L, ish = false)
 end
 
 
-# AVI:
 # Function to compute the eigenvalues of a list of (commuting) matrices, normalized
 # by the eigenvalues of the first matrix.
 #
@@ -262,29 +260,4 @@ function (p::Polynomial{B,T})(x::Vector) where {B,T}
    r
 end
 
-##################################################################
-
-# AVI: Function used for testing (over C). Not a dependency of core
-# methods. Very useful for checking to make sure I didn't destroy
-# the code.
-
-"""
-Vector of relative errors of P at the points X
-"""
-function rel_error(p, Xi::Matrix, X = variables(p))
-    r = fill(0.0, size(Xi,1), length(p))
-    n = size(Xi,2)
-    for i in 1: size(Xi,1)
-        for j in 1:length(p)
-            V = Xi[i,:]
-            r[i,j]= norm(subs(p[j],X=>V))
-            s = 0.0
-            for t in p[j]
-                s+= norm(subs(t, X => V))
-            end
-            r[i,j]/=s
-        end
-    end
-    r
-end
 

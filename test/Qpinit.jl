@@ -1,7 +1,6 @@
 
-
+using Dory
 Qp = PadicField(7,30)
-
 
 # TODO: improve the matrix constructor so that it is actually intuitive.
 
@@ -30,7 +29,7 @@ Qp = PadicField(7,30)
     
 # @assert iszero(inv(V)*X*V - A)
 
- vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
+vals, spaces = Dory.power_iteration_decomposition(A, modp.(A))
 
 # E = Dory._eigenspaces_by_power_iteration(A)
 
@@ -40,3 +39,5 @@ Qp = PadicField(7,30)
 # end
     
 # display(E)
+
+nothing

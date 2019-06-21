@@ -1,6 +1,10 @@
 
 
-## Dispatcher for nullspace
+"""
+    nullspace(A::Array{padic,2})
+
+Compute the nullspace of an array of padic numbers, viewed as a matrix.
+"""
 function nullspace(A::Array{padic,2})
     M = matrix(A)
     return Hecke.nullspace(M)[2].entries
@@ -14,11 +18,10 @@ end
 
 
 # modify the norm function to make sense
-import LinearAlgebra.norm
-norm(A :: Array{padic,1}) = maximum( abs.(A))
+#import LinearAlgebra.norm
+#norm(A :: Array{padic,1}) = maximum( abs.(A))
 
 
-# AVI:
 # Function to compute the eigenvalues of a list of (commuting) matrices, in the
 # specific case that the matrices are mult-by-coordinate-variable operators on R/I
 #

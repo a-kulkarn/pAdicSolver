@@ -1,4 +1,6 @@
 
+using Dory
+using pAdicSolver
 
 p = 13
 Qp = PadicField(p, 50)
@@ -26,4 +28,5 @@ eqns = vcat(minors(A, 3), [h1, h2]);
 # Prevent printing everything.
 nothing
 
-
+# Presently, the inefficiency of the algorithm makes this inadvisable to run.
+# sol = solve_macaulay(eqns, gens(R))

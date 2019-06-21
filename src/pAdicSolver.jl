@@ -6,7 +6,7 @@ module pAdicSolver
   using Hecke
   using Dory
 
-  degree = DynamicPolynomials.maxdegree
+  #degree = DynamicPolynomials.maxdegree
 
   export coeftype
   coeftype(::Type{Polynomial{C, T}}) where {C, T} = T

@@ -29,7 +29,6 @@ function macaulay_mat(P, L::AbstractVector, X, ish = false )
     return coefficient_matrix(M, L)
 end
 
-# AVI:
 # Takes a list of polynomials and a basis of monomials and
 # returns a matrix of coefficients corresponding to the
 # monomial basis.
@@ -123,20 +122,17 @@ function solve_macaulay(P, X;
 end
 
 
-# Dispatcher for doing the right iwasawa algorithm
-function iwasawa_step(N :: Array{T,2} where T <: Number, IdL0)
-    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
-    return F, N*F.Q
-end
-
-
-# Dispatcher for doing the right iwasawa algorithm
 """
     iwasawa_step
 
     Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
     together with  Nr = N*inv(inv(P)Q)^T.
 """
+
+function iwasawa_step(N :: Array{T,2} where T <: Number, IdL0)
+    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
+    return F, N*F.Q
+end
 
 function iwasawa_step(N :: Array{padic,2} , IdL0)
     

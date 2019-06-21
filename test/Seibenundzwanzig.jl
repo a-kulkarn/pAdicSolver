@@ -1,7 +1,5 @@
 
 
-
-using Hecke
 using Dory
 using pAdicSolver
 
@@ -13,15 +11,13 @@ Qp = PadicField(89,30)
 R, (p12, p13, p14, p23, p24) = PolynomialRing(Qp, ["p12", "p13", "p14", "p23", "p24"])
 n = length(gens(R))
 
-include("_cubic_surface_eqns.jl")
+include(".cubic_surface_eqns.jl")
 
 sol = solve_macaulay(P, gens(R), rho=5, eigenvector_method="tropical")
 #matlist, F, B, N, Nr = solve_macaulay(P, gens(R), rho=4, test_mode=true);
 
 #A = matrix(matlist[1]);
 #E = eigspaces(A);
-
-# sol = AS.solve_macaulay(P,X)
 
 # println("\n-- sol ")
 # println(sol,"\n")
