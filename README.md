@@ -26,7 +26,6 @@ Installation is with the standard Julia package manager.
     add https://github.com/a-kulkarn/Dory.git
     add https://github.com/a-kulkarn/pAdicSolver.git
 
--- At the moment, the package does not work with Julia's package manager.
 
 === Documentation ===
 
