@@ -151,11 +151,17 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
                 if (i == size(X,2) || iszero(X[i+1,i]))
                     
                     block_inds = block_start_index:i
+                    block = Y[block_inds,block_inds]
+                    sing_vals = valuation.(singular_values(block))
 
-                    # This is not quite right, since there could be cancellation in larger blocks.
-                    block_trace = sum( Y[r,r] for r in block_inds ) / X.base_ring(length(block_inds))
-                    push!( ycoords, [Dory.valuation(block_trace) for r in block_inds]...)
-
+                    # In any particular block, the valuations of the eigenvalues are equal.
+                    if Qp.prec_max in sing_vals
+                        val_of_eigenvalues = Qp.prec_max
+                    else
+                        val_of_eigenvalues = sum(sing_vals) // length(sing_vals)
+                    end
+                    
+                    push!( ycoords, [val_of_eigenvalues for r in block_inds]...)
                     block_start_index = i+1
                 end                
             end
