@@ -1,4 +1,3 @@
-export matrix, smatrix, mult_basis, mult_matrix, eigdiag, padic_eigdiag, kernel
 
 #import LinearAlgebra: nullspace
 #using SparseArrays
@@ -145,12 +144,11 @@ end
 
 function permute_and_divide_by_x0(L0,F,ish)
     B = []
-    m = size(F.Q,1) # rename this...
+    m = size(F.Q,1) # The dimension of the quotient algebra.
     if ish
         for i in 1:m
-            m = copy(L0[F.p[i]])
-            divexact(m, gens(parent(m))[1])
-            push!(B, m)
+            m = copy(L0[F.p[i]])            
+            push!(B, Dory.divexact(m, gens(parent(m))[1]))
             # should test if the diag. coeff. is not small
         end
     else
@@ -187,7 +185,8 @@ function mult_matrices(B, X, K, L, ish = false)
             if k != 0
                 M[i,:] = K[k,:]
             else
-                println(k,m,v) # this never appears to happen
+                println(k,m,v) # By definition of B, the lookup should never fail.
+                error("Failure to construct multiplication matrix. Likely due to bad basis.")
             end
         end
         return M
@@ -245,19 +244,5 @@ function normalized_simultaneous_eigenvalues(M :: Array{Array{T,2},1} where T <:
     return normalize_solution!(X, ish)
 end
 
-
-## Looks like a function for evaluating a polynomial at a vector?
-## WARNING: It allows you to evaluate at a vector that is too long...
-function (p::Polynomial{B,T})(x::Vector) where {B,T}
-   r = zero(x[1]);
-   for m in p
-      t=m.α
-      for i in 1:length(m.x.z)
-      	 t*=x[i]^m.x.z[i]
-      end
-      r+=t
-   end
-   r
-end
 
 

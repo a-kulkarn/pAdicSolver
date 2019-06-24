@@ -15,6 +15,11 @@ Package for solving 0-dimensional padic polynomial systems. Examples for usage a
 Dory.jl can be found at: https://github.com/a-kulkarn/Dory.git
 
 
+OPTIONAL PACKAGES:
+-- ConvertDynamicPolynomials
+
+ConvertDynamicPolynomials can be found at: https://github.com/a-kulkarn/ConvertDynamicPolynomials.git
+
 This package is a fork of Bernard Mourrain's solver.
 https://gitlab.inria.fr/AlgebraicGeometricModeling/AlgebraicSolvers.jl.git
 
