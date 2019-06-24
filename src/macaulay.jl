@@ -1,7 +1,6 @@
 export macaulay_mat, solve_macaulay, coefficient_matrix
 
 using LinearAlgebra
-using DynamicPolynomials
 
 function is_not_homogeneous(p)
     L = [total_degree(t) for t in Hecke.terms(p)]
@@ -70,8 +69,6 @@ function solve_macaulay(P, X;
                         rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
                         eigenvector_method="power",
                         test_mode=false )
-
-
     
     println()
     println("-- Degrees ", map(p->total_degree(p),P))
