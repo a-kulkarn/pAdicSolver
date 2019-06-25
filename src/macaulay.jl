@@ -69,6 +69,10 @@ function solve_macaulay(P, X;
                         rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
                         eigenvector_method="power",
                         test_mode=false )
+
+    # This solve function could be made to work with polynomials with FlintRR coefficients
+    # as well, though this requires managing the type dispatch a bit and remodeling the
+    # old DynamicPolynomials based subfunctions.
     
     println()
     println("-- Degrees ", map(p->total_degree(p),P))
