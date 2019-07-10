@@ -12,7 +12,85 @@ end
 #
 
 # Creates the macaulay matrix of the polynomial system P.
-function macaulay_mat(P, L::AbstractVector, X, ish = false )
+#
+# Should return
+#    --- macaulay matrix
+#    --- monomial "array"  (could be stored as a dictionary to enable indexing D[m]).
+
+## Let's make a different implementation later
+
+export mysort
+function mysort(L)
+    p = sum(L::Array{typeof(L[1]),1})
+    return [m for m in monomials(p)]
+end
+
+export generate_list_of_monomials
+
+
+## Look into optimizations.
+function generate_list_of_monomials(P, X, rho)    
+
+    degrees = unique!(map(p->total_degree(p),P))
+
+    multiplier_monomials = Dict(d=>monomials_of_degree(X, rho-d) for d in degrees)
+
+    monomial_set = Set{typeof(P[1])}()
+    
+    for p in P            
+        for m in multiplier_monomials[total_degree(p)]
+            for mon in monomials(p)
+                push!(monomial_set, mon*m)
+            end
+        end
+    end
+
+    sorted_list = mysort(collect(monomial_set))  
+    monomial_dict = Dict(sorted_list[i]=>i for i=1:length(sorted_list))
+    
+    # Compute Macaulay stuff later
+    # , store the result as a sparse_row.
+
+    MacMatrix = sparse_matrix(parent(P[1]))
+    for p in P            
+        for m in multiplier_monomials[total_degree(p)]
+                srow = sparse_row( parent(P[1]), [monomial_dict[m*mon] for mon in monomials(p)],
+                                  [c for c in coeffs(p)] )
+                push!(MacMatrix, srow)
+        end
+    end
+
+    
+    #error("Not finished")
+    return MacMatrix
+end
+
+function macaulay_mat(P, X, ish = false )
+
+    if ish
+        L = [m for m in monomials_of_degree(X, rho)]
+    else
+        L = [m for m in monomials_of_degree(X, 0:rho)]
+    end
+
+    L = generate_list_of_monomials(P,X, rho)
+    
+    # We also specifically designate the "monomial" of x0 in the computations.
+    # in the affine case, the monomial x0 is just "1", in which case we mean take the
+    # monomials whose degrees are not maximal.
+    #
+    # The KEY property of this monomial basis L0 is that for any element b, xi*b remains inside the
+    # larger monomial basis L. That is,
+    #                                         X ⋅ L0 ⊂ L
+    Idx = idx(L)
+    L0 = monomials_divisible_by_x0(L, ish)
+    IdL0 = [get(Idx, m,0) for m in L0]
+    
+    # START MAIN SOLVER
+    t0 = time()
+    println("-- Monomials ", length(L), " degree ", rho,"   ",time()-t0, "(s)"); t0 = time()
+
+    
     d = maximum([total_degree(m) for m in L])
     if ish
         Q = [monomials_of_degree(X,d-total_degree(P[i])) for i in 1:length(P)]
@@ -82,27 +160,8 @@ function solve_macaulay(P, X;
     
     ish = !any(is_not_homogeneous, P)
     println("-- Homogeneity ", ish)
-    if ish
-        L = [m for m in monomials_of_degree(X, rho)]
-    else
-        L = [m for m in monomials_of_degree(X, 0:rho)]
-    end
-    # We also specifically designate the "monomial" of x0 in the computations.
-    # in the affine case, the monomial x0 is just "1", in which case we mean take the
-    # monomials whose degrees are not maximal.
-    #
-    # The KEY property of this monomial basis L0 is that for any element b, xi*b remains inside the
-    # larger monomial basis L. That is,
-    #                                         X ⋅ L0 ⊂ L
-    Idx = idx(L)
-    L0 = monomials_divisible_by_x0(L, ish)
-    IdL0 = [get(Idx, m,0) for m in L0]
-    
-    # START MAIN SOLVER
-    t0 = time()
-    println("-- Monomials ", length(L), " degree ", rho,"   ",time()-t0, "(s)"); t0 = time()
 
-    R = macaulay_mat(P, L, X, ish)
+    R = macaulay_mat(P, X, ish)
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
     N = nullspace(R)
 
