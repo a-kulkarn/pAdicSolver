@@ -7,6 +7,9 @@ function is_not_homogeneous(p)
     return maximum(L) != minimum(L)
 end
 
+#
+# Try to only generate the list of monomials once. 
+#
 
 # Creates the macaulay matrix of the polynomial system P.
 function macaulay_mat(P, L::AbstractVector, X, ish = false )
