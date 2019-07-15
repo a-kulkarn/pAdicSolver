@@ -19,13 +19,8 @@ end
 
 ## Let's make a different implementation later
 
-export mysort
-function mysort(L)
-    p = sum(L::Array{typeof(L[1]),1})
-    return [m for m in monomials(p)]
-end
 
-export generate_list_of_monomials
+export macaulay_mat
 
 ## Present issues.
 # Performance is not good, and garbage collector runs way too much.
@@ -74,52 +69,6 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     end
     
     return macaulay_matrix, monomial_dict
-end
-
-## Never used, but used as a template for development.
-# will be removed in the future.
-function macaulay_mat_dense(P, X, ish = false )
-
-    if ish
-        L = [m for m in monomials_of_degree(X, rho)]
-    else
-        L = [m for m in monomials_of_degree(X, 0:rho)]
-    end
-
-    L = generate_list_of_monomials(P,X, rho)
-    
-    # We also specifically designate the "monomial" of x0 in the computations.
-    # in the affine case, the monomial x0 is just "1", in which case we mean take the
-    # monomials whose degrees are not maximal.
-    #
-    # The KEY property of this monomial basis L0 is that for any element b, xi*b remains inside the
-    # larger monomial basis L. That is,
-    #                                         X ⋅ L0 ⊂ L
-    Idx = idx(L)
-    L0 = monomials_divisible_by_x0(L, ish)
-    IdL0 = [get(Idx, m,0) for m in L0]
-    
-    # START MAIN SOLVER
-    t0 = time()
-    println("-- Monomials ", length(L), " degree ", rho,"   ",time()-t0, "(s)"); t0 = time()
-
-    
-    d = maximum([total_degree(m) for m in L])
-    if ish
-        Q = [monomials_of_degree(X,d-total_degree(P[i])) for i in 1:length(P)]
-    else
-        Q = [monomials_of_degree(X,0:d-total_degree(P[i])) for i in 1:length(P)]
-    end
-
-    ### this looks like it can be optimized a bit.
-    M = []
-    for i in 1:length(P)
-        for m in Q[i]
-            push!(M,P[i]*m)
-        end
-    end
-    ###    
-    return coefficient_matrix(M, L)
 end
 
 # Takes a list of polynomials and a basis of monomials and
@@ -176,13 +125,10 @@ function solve_macaulay(P, X;
 
     t0 = time()
     R, L = macaulay_mat(P, X, rho, ish)
-    R = Hecke.Nemo.matrix(R)
-
-    display(L)
+    R = matrix(R)
 
     # Not efficient. This is intermediate code to check tests.
-    L0 = monomials_divisible_by_x0(keys(L), ish)
-    IdL0 = [get(L, m,0) for m in L0]
+    L0 = monomials_divisible_by_x0(L, ish)
     
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
     N = nullspace(R)[2]
@@ -199,7 +145,7 @@ function solve_macaulay(P, X;
     # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
     #    coordinates is not important in the final step, when the eigenvalues are calulated.
     #
-    F, Nr = iwasawa_step(N, IdL0)
+    F, Nr = iwasawa_step(N, L0)
     B = permute_and_divide_by_x0(L0, F, ish)
 
     println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
@@ -229,7 +175,7 @@ end
     together with  Nr = N*inv(inv(P)Q)^T.
 """
 
-function iwasawa_step(N :: Array{T,2} where T <: Number, IdL0)
+function iwasawa_step(N :: Array{T,2} where T <: Number, L0)
     F = qr( Array(transpose(N[IdL0,:])) , Val(true))
     return F, N*F.Q
 end
@@ -241,6 +187,19 @@ function iwasawa_step(N :: Array{padic,2} , IdL0)
     Fpinv= Dory.inverse_permutation(F.p)
 
     X = Qinv[Fpinv,:].entries    
+    Farr = QRPadicArrayPivoted( (F.Q.entries)[Fpinv,:], F.R.entries, F.q)
+    
+    return Farr, N*X
+end
+
+
+function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
+    
+    F = padic_qr( transpose(N[collect(values(L0)),:]) , col_pivot=Val(true))
+    Qinv = Dory.inv_unit_lower_triangular(F.Q)
+    Fpinv= Dory.inverse_permutation(F.p)
+
+    X = Qinv[Fpinv,:]
     Farr = QRPadicArrayPivoted( (F.Q.entries)[Fpinv,:], F.R.entries, F.q)
     
     return Farr, N*X
