@@ -27,45 +27,58 @@ end
 
 export generate_list_of_monomials
 
-
-## Look into optimizations.
-function generate_list_of_monomials(P, X, rho)    
+## Present issues.
+# Performance is not good, and garbage collector runs way too much.
+# bizzare reversal should be made more robust.
+# homogeneity is not handled.
+#
+function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
+                      X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
 
     degrees = unique!(map(p->total_degree(p),P))
 
-    multiplier_monomials = Dict(d=>monomials_of_degree(X, rho-d) for d in degrees)
-
-    monomial_set = Set{typeof(P[1])}()
+    monomial_set = Set{Hecke.Generic.MPoly{T}}()
     
-    for p in P            
-        for m in multiplier_monomials[total_degree(p)]
+    for d in degrees
+        multiplier_monomials = monomials_of_degree(X, rho-d)
+        
+        @time for p in filter(x->total_degree(x)==d, P)            
             for mon in monomials(p)
-                push!(monomial_set, mon*m)
+                for m in multiplier_monomials
+                    push!(monomial_set, mon*m)
+                end
             end
         end
     end
 
-    sorted_list = mysort(collect(monomial_set))  
-    monomial_dict = Dict(sorted_list[i]=>i for i=1:length(sorted_list))
+    # The method "isless" is defined in AbstractAlgebra. By default Julia will use this to sort.
+    monomial_set = collect(monomial_set)
+    sort!(monomial_set)    
+    monomial_dict = Dict(monomial_set[i]=>i for i=1:length(monomial_set))
     
     # Compute Macaulay stuff later
     # , store the result as a sparse_row.
-
-    MacMatrix = sparse_matrix(parent(P[1]))
-    for p in P            
-        for m in multiplier_monomials[total_degree(p)]
-                srow = sparse_row( parent(P[1]), [monomial_dict[m*mon] for mon in monomials(p)],
-                                  [c for c in coeffs(p)] )
-                push!(MacMatrix, srow)
+    R = base_ring(parent(P[1]))
+    
+    macaulay_matrix = sparse_matrix(R)
+    for d in degrees
+        multiplier_monomials = monomials_of_degree(X, rho-d)
+        
+        @time for p in filter(x->total_degree(x)==d, P)            
+            for m in multiplier_monomials
+                srow = sparse_row( R, reverse([monomial_dict[m*mon] for mon in monomials(p)]),
+                                   reverse(collect(coeffs(p))) )
+                push!(macaulay_matrix, srow)
+            end
         end
     end
-
     
-    #error("Not finished")
-    return MacMatrix
+    return macaulay_matrix, monomial_dict
 end
 
-function macaulay_mat(P, X, ish = false )
+## Never used, but used as a template for development.
+# will be removed in the future.
+function macaulay_mat_dense(P, X, ish = false )
 
     if ish
         L = [m for m in monomials_of_degree(X, rho)]
@@ -161,9 +174,18 @@ function solve_macaulay(P, X;
     ish = !any(is_not_homogeneous, P)
     println("-- Homogeneity ", ish)
 
-    R = macaulay_mat(P, X, ish)
+    t0 = time()
+    R, L = macaulay_mat(P, X, rho, ish)
+    R = Hecke.Nemo.matrix(R)
+
+    display(L)
+
+    # Not efficient. This is intermediate code to check tests.
+    L0 = monomials_divisible_by_x0(keys(L), ish)
+    IdL0 = [get(L, m,0) for m in L0]
+    
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
-    N = nullspace(R)
+    N = nullspace(R)[2]
 
     println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
