@@ -31,11 +31,16 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
                       X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
 
     degrees = unique!(map(p->total_degree(p),P))
-
+    
+    
     monomial_set = Set{Hecke.Generic.MPoly{T}}()
     
     for d in degrees
-        multiplier_monomials = monomials_of_degree(X, rho-d)
+        if ish
+            multiplier_monomials = monomials_of_degree(X, rho-d)
+        else
+            multiplier_monomials = monomials_of_degree(X, 0:rho-d)
+        end
         
         @time for p in filter(x->total_degree(x)==d, P)            
             for mon in monomials(p)
@@ -57,7 +62,11 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     
     macaulay_matrix = sparse_matrix(R)
     for d in degrees
-        multiplier_monomials = monomials_of_degree(X, rho-d)
+        if ish
+            multiplier_monomials = monomials_of_degree(X, rho-d)
+        else
+            multiplier_monomials = monomials_of_degree(X, 0:rho-d)
+        end        
         
         @time for p in filter(x->total_degree(x)==d, P)            
             for m in multiplier_monomials
