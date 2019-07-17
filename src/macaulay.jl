@@ -134,13 +134,13 @@ function solve_macaulay(P, X;
 
     t0 = time()
     R, L = macaulay_mat(P, X, rho, ish)
-    R = matrix(R)
-
+    # R = matrix(R)
+    
     # Not efficient. This is intermediate code to check tests.
     L0 = monomials_divisible_by_x0(L, ish)
     
     println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
-    N = nullspace(R)[2]
+    @time N = nullspace(R)[2]
 
     println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
