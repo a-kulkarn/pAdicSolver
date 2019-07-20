@@ -31,29 +31,25 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
                       X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
 
     degrees = unique!(map(p->total_degree(p),P))
-    
-    
-    monomial_set = Set{Hecke.Generic.MPoly{T}}()
+    monomial_set    = Set{Hecke.Generic.MPoly{T}}()
+    mult_monomials  = Array{Array{Hecke.Generic.MPoly{T}}}(undef, maximum(degrees))
     
     for d in degrees
         if ish
-            multiplier_monomials = monomials_of_degree(X, rho-d)
+            mult_monomials[d] = monomials_of_degree(X, rho-d)
         else
-            multiplier_monomials = monomials_of_degree(X, 0:rho-d)
+            mult_monomials[d] = monomials_of_degree(X, 0:rho-d)
         end
-        
-        @time for p in filter(x->total_degree(x)==d, P)            
-            for mon in monomials(p)
-                for m in multiplier_monomials
-                    push!(monomial_set, mon*m)
-                end
-            end
+    end
+    @time for p in P
+        for m in mult_monomials[total_degree(p)]
+            push!(monomial_set, monomials(m*p)...)
         end
     end
 
     # The method "isless" is defined in AbstractAlgebra. By default Julia will use this to sort.
     monomial_set = collect(monomial_set)
-    sort!(monomial_set)    
+    sort!(monomial_set, rev=true)
     monomial_dict = Dict(monomial_set[i]=>i for i=1:length(monomial_set))
     
     # Compute Macaulay stuff later
@@ -61,22 +57,14 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     R = base_ring(parent(P[1]))
     
     macaulay_matrix = sparse_matrix(R)
-    for d in degrees
-        if ish
-            multiplier_monomials = monomials_of_degree(X, rho-d)
-        else
-            multiplier_monomials = monomials_of_degree(X, 0:rho-d)
-        end        
-        
-        @time for p in filter(x->total_degree(x)==d, P)            
-            for m in multiplier_monomials
-                srow = sparse_row( R, reverse([monomial_dict[m*mon] for mon in monomials(p)]),
-                                   reverse(collect(coeffs(p))) )
-                push!(macaulay_matrix, srow)
-            end
+    @time for p in P
+        for m in mult_monomials[total_degree(p)]
+            srow = sparse_row( R, [monomial_dict[mon] for mon in monomials(m*p)],
+                                collect(coeffs(p)) )
+            push!(macaulay_matrix, srow)
         end
     end
-    
+
     return macaulay_matrix, monomial_dict
 end
 
