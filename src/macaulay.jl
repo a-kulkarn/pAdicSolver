@@ -42,10 +42,8 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
         end
     end
     @time for p in P
-        for mon in monomials(p)
-            for m in mult_monomials[total_degree(p)]
-                push!(monomial_set, m*mon)
-            end
+        for m in mult_monomials[total_degree(p)]
+            push!(monomial_set, monomials(m*p)...)
         end
     end
 
@@ -61,7 +59,7 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     macaulay_matrix = sparse_matrix(R)
     @time for p in P
         for m in mult_monomials[total_degree(p)]
-            srow = sparse_row( R, [monomial_dict[m*mon] for mon in monomials(p)],
+            srow = sparse_row( R, [monomial_dict[mon] for mon in monomials(m*p)],
                                 collect(coeffs(p)) )
             push!(macaulay_matrix, srow)
         end
