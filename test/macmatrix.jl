@@ -9,7 +9,7 @@ n = length(gens(R))
 
 include(".cubic_surface_eqns.jl")
 
-rho=5;
+rho=4;
 X=gens(R);
 
 println()
@@ -20,6 +20,9 @@ println("-- Homogeneity ", ish)
 
 t0 = time()
 R, L = macaulay_mat(P, X, rho, ish)
+
+println( valuation.(singular_values(matrix(R))) )
+
 # R = matrix(R)
 
 # F = padic_qr(transpose(R))

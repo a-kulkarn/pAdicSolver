@@ -59,6 +59,7 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     macaulay_matrix = sparse_matrix(R)
     @time for p in P
         for m in mult_monomials[total_degree(p)]
+
             srow = sparse_row( R, [monomial_dict[mon] for mon in monomials(m*p)],
                                 collect(coeffs(p)) )
             push!(macaulay_matrix, srow)
@@ -191,8 +192,8 @@ end
 
 
 function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
-    
-    F = padic_qr( transpose(N[collect(values(L0)),:]) , col_pivot=Val(true))
+
+    F = padic_qr( transpose(N[ sort(collect(values(L0))),:]) , col_pivot=Val(true))
     Qinv = Dory.inv_unit_lower_triangular(F.Q)
     Fpinv= Dory.inverse_permutation(F.p)
 

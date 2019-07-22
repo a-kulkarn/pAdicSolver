@@ -145,7 +145,7 @@ function permute_and_divide_by_x0(L0,F,ish)
     B = Dict()
     m = size(F.Q,1) # The dimension of the quotient algebra.
 
-    # Extract the column to monomial correspondence.
+    # Extract the column to monomial correspondence.    
     key_array = first.(sort(collect(L0), by=x->x[2]))
 
     if ish
