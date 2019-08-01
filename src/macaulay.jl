@@ -101,19 +101,23 @@ Solve a 0-dimensional system of polynomial equations. (Presently, only over Qp)
 
 INPUTS:
 P   -- polynomial system, a Vector of AbstractAlgebra polynomials.
-X   -- variables in the polynomial system
 rho -- monomial degree of the system. Default is the macaulay degree.
+tnf_method -- Strategy used to obtain a truncated normal form. 
+              Default is solving for the nullspace of the Macaulay matrix over Qp
 eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
 
 """
-function solve_macaulay(P, X;
+function solve_macaulay(P;
                         rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
-                        eigenvector_method="power",
+                        tnf_method = "padic",
+                        eigenvector_method = "power",
                         test_mode=false )
 
     # This solve function could be made to work with polynomials with FlintRR coefficients
     # as well, though this requires managing the type dispatch a bit and remodeling the
     # old DynamicPolynomials based subfunctions.
+
+    X = gens(parent(P[1]))
     
     println()
     println("-- Degrees ", map(p->total_degree(p),P))
@@ -122,15 +126,50 @@ function solve_macaulay(P, X;
     println("-- Homogeneity ", ish)
 
     t0 = time()
-    R, L = macaulay_mat(P, X, rho, ish)
-    # R = matrix(R)
-    
-    # Not efficient. This is intermediate code to check tests.
-    L0 = monomials_divisible_by_x0(L, ish)
-    
-    println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",time()-t0, "(s)"); t0 = time()
-    @time N = nullspace(R)[2]
 
+    if tnf_method == "padic"
+        R, L = macaulay_mat(P, X, rho, ish)           
+    
+        # Not efficient. This is intermediate code to check tests.
+        L0 = monomials_divisible_by_x0(L, ish)
+    
+        println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",
+                time()-t0, "(s)"); t0 = time()
+        
+        @time N = nullspace(R)[2]
+        
+    elseif tnf_method == "groebner"
+
+        error("Not Implemented. Still in development...")
+        
+        # Do singular Groebner things
+
+        #0. Convert AbstractAlgebra polys to Singular polys. [Might need to write converter.]
+
+        # sing_ring
+        # converted polynomials
+        
+        ## 1. Compute the singular groebner basis
+        # id = Singular.Ideal( sing_ring , sing_polys )
+        # @time G = Singular.slimgb(id);
+
+        ## 2. Construct basis of quotient R/id
+        # B = Singular.kbase(G)
+      
+        ## 3. Turn Groebner basis into matrix N.
+        # reconvert B elements into AbstractAlgebra polynomials.
+        # compute the matrix
+        # change coefficient ring to Qp
+
+
+        ## The prime will be specified by the user..
+        ## The precsion should also be specified, or the user should request
+        ## some feature to be invoked.
+
+        # Question: How to decide the right precision for the user at this stage???
+        
+    end
+        
     println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
     println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
 

@@ -13,7 +13,7 @@ s = length(M)
 
 P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
-sol = solve_macaulay(P, gens(R))
+sol = solve_macaulay(P)
 
 println("\n-- sol ")
 println(sol,"\n")
