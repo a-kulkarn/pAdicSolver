@@ -247,3 +247,5 @@ id = Singular.Ideal(R, [eval(Meta.parse("$p")) for p in ps])
 idl = Singular.Ideal(R, [random_linear_equations(R) for i = 1:11])
 @time id = id + idl
 @time G = Singular.slimgb(id);
+# basis of quotient R/id
+B = Singular.kbase(G)
