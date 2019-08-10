@@ -1,4 +1,5 @@
 using Hecke
+import Nemo
 import Singular
 
 # For now, simple conversion function.
@@ -22,9 +23,10 @@ function AAtoSingular(R::Hecke.Generic.MPolyRing{T} where T)
 end
 
 function AAtoSingular(R::Hecke.Generic.MPolyRing{T} where
-                      T<:Union{Singular.Ring, Singular.Field, Singular.n_Zp})
+                      T<:Union{Singular.Ring, Nemo.gfp_elem, Singular.n_Zp})
     br = R.base_ring
-    return Singular.PolynomialRing(br, ["s$x" for x in R.S])
+    c = Int(characteristic(br))
+    return Singular.PolynomialRing(Singular.N_ZpField(c), ["s$x" for x in R.S])
 end
 
 
@@ -45,7 +47,8 @@ end
 
 R, (x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34, x35, x36, x37, x38, x39, x40) =
     #PolynomialRing(Singular.QQ,
-    PolynomialRing(Singular.N_ZpField(32003),
+    PolynomialRing(FiniteField(32003),
+    #PolynomialRing(Singular.N_ZpField(32003),
                    ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12",
                     "x13", "x14", "x15", "x16", "x17", "x18", "x19", "x20", "x21", "x22", "x23",
                     "x24", "x25", "x26", "x27", "x28", "x29", "x30", "x31", "x32", "x33", "x34",
@@ -284,10 +287,10 @@ x1^2+x25*x27-x26*x34
 
 singR, (x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34, x35, x36, x37, x38, x39, x40) = AAtoSingular(R)
 
-id = Singular.Ideal(singR, [singR(p) for p in ps])
+id = Singular.Ideal(singR, [singR(eval(Meta.parse("$p"))) for p in ps])
 idl = Singular.Ideal(singR, [random_linear_equations(singR) for i = 1:11])
 id = id + idl
 
-#@time G = Singular.slimgb(id);
+@time G = Singular.slimgb(id);
 # basis of quotient R/id
-#B = Singular.kbase(G)
+B = Singular.kbase(G)
