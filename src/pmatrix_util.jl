@@ -17,16 +17,16 @@ struct QRPadicArrayPivoted
 end
 
 
-# modify the norm function to make sense
-#import LinearAlgebra.norm
-#norm(A :: Array{padic,1}) = maximum( abs.(A))
+@doc Markdown.doc"""
+    normalized_simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
+            --> eigenvalue_matrix :: Hecke.Generic.MatElem{T}
 
+(Internal function) Compute the eigenvalues of a list of commuting matrices, given as an array. In the
+specific case that the matrices are mult-by-coordinate-variable operators on R/I
 
-# Function to compute the eigenvalues of a list of (commuting) matrices, in the
-# specific case that the matrices are mult-by-coordinate-variable operators on R/I
-#
-# INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
-# Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
+INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
+Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
+"""
 function normalized_simultaneous_eigenvalues(
     inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
 
@@ -92,6 +92,17 @@ function normalized_simultaneous_eigenvalues(
     return normalize_solution!(X, ish)
 end
 
+@doc Markdown.doc"""
+    nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
+            --> eigenvalue_matrix :: Hecke.Generic.MatElem{T}
+
+(Internal function) Compute the eigenvalues of a list of commuting matrices, given as an array. In the
+specific case that the matrices are mult-by-coordinate-variable operators on R/I. The method attempts to
+use the Schur form decomposition.
+
+INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
+Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
+"""
 
 function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
     

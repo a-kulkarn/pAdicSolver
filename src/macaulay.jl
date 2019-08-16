@@ -1,4 +1,4 @@
-export macaulay_mat, solve_macaulay, coefficient_matrix
+export macaulay_mat, solve_macaulay
 
 using LinearAlgebra
 
@@ -7,19 +7,6 @@ function is_not_homogeneous(p)
     return maximum(L) != minimum(L)
 end
 
-#
-# Try to only generate the list of monomials once. 
-#
-
-# Creates the macaulay matrix of the polynomial system P.
-#
-# Should return
-#    --- macaulay matrix
-#    --- monomial "array"  (could be stored as a dictionary to enable indexing D[m]).
-
-## Let's make a different implementation later
-
-
 export macaulay_mat
 
 ## Present issues.
@@ -27,6 +14,13 @@ export macaulay_mat
 # bizzare reversal should be made more robust.
 # homogeneity is not handled.
 #
+@doc Markdown.doc"""
+    macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
+                      X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
+
+Constructs the sparse macaulay matrix defined by the polynomials `P` and degree bound `rho`. The argument `X`
+is a list of variables of the ambient polynomial ring used to construct the multiplier monomials. 
+"""
 function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
                       X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
 
@@ -51,11 +45,9 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     monomial_set = collect(monomial_set)
     sort!(monomial_set, rev=true)
     monomial_dict = Dict(monomial_set[i]=>i for i=1:length(monomial_set))
-    
-    # Compute Macaulay stuff later
-    # , store the result as a sparse_row.
-    R = base_ring(parent(P[1]))
-    
+
+    # Create sparse rows for each m*p, with m a mulitplier monomial and p a polynomial.
+    R = base_ring(parent(P[1]))    
     macaulay_matrix = sparse_matrix(R)
     @time for p in P
         for m in mult_monomials[total_degree(p)]
@@ -69,49 +61,43 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     return macaulay_matrix, monomial_dict
 end
 
-# Takes a list of polynomials and a basis of monomials and
-# returns a matrix of coefficients corresponding to the
-# monomial basis.
-#
-# L -- list of monomials
-#import MultivariatePolynomials.coefficients
-function coefficient_matrix(P::Vector, L)
-    return Array(transpose(hcat([coeff(p, L) for p in P]...)))
-end
-
 
 ## ***************************************************************************************    
 # Main solver function
 
     # calls to:
     # macaulay_mat
+    # iwasawa_step
     # mult_matrix
     # eigdiag
 ## ***************************************************************************************
 
-"""
-    solve_macaulay(P, X;
-                        rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
-                        eigenvector_method="power",
-                        test_mode=false )
+@doc Markdown.doc"""
+    solve_macaulay(P :: Vector{Hecke.Generic.MPolyElem{T}} where T <: Hecke.RingElem;
+                   rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                   eigenvector_method  :: String ="power",
+                   test_mode  :: Bool =false )
 
-Solve a 0-dimensional system of polynomial equations. (Presently, only over Qp)
+Solve a 0-dimensional system of polynomial equations. (Presently, only over Qp.) More precisely,
+compute the values of x in Qp^n such that 
 
+    all([ iszero(p(x)) for p in P ]) == true
+
+The options specify strategy parameters.
 #-------------------
 
 INPUTS:
-P   -- polynomial system, a Vector of AbstractAlgebra polynomials.
-rho -- monomial degree of the system. Default is the macaulay degree.
-tnf_method -- Strategy used to obtain a truncated normal form. 
-              Default is solving for the nullspace of the Macaulay matrix over Qp
-eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
+- P   -- polynomial system, a Vector of AbstractAlgebra polynomials.
+- rho -- monomial degree of the system. Default is the macaulay degree.
+- tnf_method -- Strategy used to obtain a truncated normal form. Default is solving for the nullspace of the Macaulay matrix over Qp.
+- eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
 
 """
-function solve_macaulay(P;
-                        rho =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
-                        tnf_method = "padic",
-                        eigenvector_method = "power",
-                        test_mode=false )
+function solve_macaulay(P  ;
+                        rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                        tnf_method :: String = "padic",
+                        eigenvector_method :: String = "power",
+                        test_mode :: Bool =false )
 
     # This solve function could be made to work with polynomials with FlintRR coefficients
     # as well, though this requires managing the type dispatch a bit and remodeling the
@@ -205,8 +191,10 @@ function solve_macaulay(P;
 end
 
 
-"""
-    iwasawa_step
+@doc Markdown.doc"""
+    iwasawa_step(N :: Array{T,2} where T <: Number, L0)
+    iwasawa_step(N :: Array{padic,2} , IdL0)
+    iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
 
     Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
     together with  Nr = N*inv(inv(P)Q)^T.

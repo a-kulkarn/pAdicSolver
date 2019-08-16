@@ -1,6 +1,7 @@
 
 module pAdicSolver
 
+  using Markdown
   using Hecke
   using Dory
 
