@@ -84,6 +84,7 @@ compute the values of x in Qp^n such that
     all([ iszero(p(x)) for p in P ]) == true
 
 The options specify strategy parameters.
+
 #-------------------
 
 INPUTS:
