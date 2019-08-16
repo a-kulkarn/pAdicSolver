@@ -132,31 +132,35 @@ function is_divisible_by_x0(m)
     return total_degree(gcd(m, gens(parent(m))[1])) > 0
 end
 
-# Figure out what L0 should be
 function monomials_divisible_by_x0(L,ish)
     if ish
-        return filter(is_divisible_by_x0, L) 
+        return filter(kvp->is_divisible_by_x0(first(kvp)), L) 
     else
-        d  = maximum([total_degree(m) for m in L])
-        return filter(m->total_degree(m)<d,L)
+        d  = maximum([total_degree(m) for m in keys(L)])
+        return filter(kvp->total_degree(first(kvp))<d,L)
     end
 end
 
 function permute_and_divide_by_x0(L0,F,ish)
-    B = []
+    B = Dict()
     m = size(F.Q,1) # The dimension of the quotient algebra.
+
+    # Extract the column to monomial correspondence.    
+    key_array = first.(sort(collect(L0), by=x->x[2]))
+
     if ish
         for i in 1:m
-            m = copy(L0[F.p[i]])            
-            push!(B, Dory.divexact(m, gens(parent(m))[1]))
+            m = copy( key_array[F.p[i]]  )
+            push!(B, Dory.divexact(m, gens(parent(m))[1])=>i )
             # should test if the diag. coeff. is not small
         end
     else
         for i in 1:m
-            push!(B, L0[F.p[i]])
+            push!(B,  key_array[F.p[i]]=>i )
             # should test if the diag. coeff. is not small
         end
     end
+ 
     return B
 end
     
@@ -172,23 +176,18 @@ end
 # a list of matrices whose eigenvalues are the solution coordinates.
 # The matrices represent multiplication-by-xi maps  ** in Q-coordinates **
 function mult_matrices(B, X, K, L, ish = false)
-    KM = idx(L)
-    Idx = idx(B)
 
     # For an affine system, '1' is needed as a monomial as well.
     if !ish Y = vcat([parent(X[1])(1)],X) else Y = X end
     
     function construct_monomial_mult_matrix(v)
         M = fill( eltype(K)(0), length(B), size(K,2) )
-        for (m,i) in Idx.terms
-            k = get(KM, m*v, 0)
-            if k != 0
-                M[i,:] = K[k,:]
-            else
-                println(k,m,v) # By definition of B, the lookup should never fail.
-                error("Failure to construct multiplication matrix. Likely due to bad basis.")
-            end
+        
+        for (m,i) in collect(B)
+            k = L[m*v]
+            M[i,:] = K.entries[k,:] # Might be nice to make this compatible with matrix type.
         end
+        
         return M
     end
     
