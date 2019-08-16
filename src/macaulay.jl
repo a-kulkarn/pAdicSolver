@@ -117,7 +117,6 @@ function solve_macaulay(P  ;
     if tnf_method == "padic"
         R, L = macaulay_mat(P, X, rho, ish)           
     
-        # Not efficient. This is intermediate code to check tests.
         L0 = monomials_divisible_by_x0(L, ish)
     
         println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",
@@ -130,7 +129,9 @@ function solve_macaulay(P  ;
         error("Not Implemented. Still in development...")
         
         # Do singular Groebner things
-
+        #
+        # Methinks it's better to have the user give a GB as an input and set a groebner_basis=true option.
+        
         #0. Convert AbstractAlgebra polys to Singular polys. [Might need to write converter.]
 
         # sing_ring
