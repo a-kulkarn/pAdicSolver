@@ -61,7 +61,6 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     return macaulay_matrix, monomial_dict
 end
 
-
 ## ***************************************************************************************    
 # Main solver function
 
@@ -98,13 +97,19 @@ function solve_macaulay(P  ;
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
                         tnf_method :: String = "padic",
                         eigenvector_method :: String = "power",
-                        test_mode :: Bool =false )
+                        test_mode :: Bool = false )
 
     # This solve function could be made to work with polynomials with FlintRR coefficients
     # as well, though this requires managing the type dispatch a bit and remodeling the
     # old DynamicPolynomials based subfunctions.
 
-    X = gens(parent(P[1]))
+    # TODO: There is some question about the call signature, on whether the groebner option
+    # should accept a groebner basis as input, or if this should be computed on the fly.
+    # The input type is likely important for this consideration.
+    
+    the_ring = parent(P[1])
+    
+    X = gens(the_ring)
     
     println()
     println("-- Degrees ", map(p->total_degree(p),P))
@@ -125,17 +130,31 @@ function solve_macaulay(P  ;
         @time N = nullspace(R)[2]
         
     elseif tnf_method == "groebner"
+        
+        # With this name, we should compute the grobner basis. 
+                
+        @assert base_ring(the_ring) == FlintQQ
 
+        sing_R,sing_vars = Singular.PolynomialRing(Singular.QQ,
+                                              ["xx" * string(i) for i=1:nvars(the_ring)] )
+
+
+        singular_id_basis = map(f-> rauls_change_base_ring(f, Singular.QQ, sing_R), P)
+
+        singular_id    = Singular.Ideal(sing_R, singular_id_basis)
+        singular_id_gb = Singular.slimgb(id)
+        singular_B     = Singular.kbase(singular_id_gb)
+        
+        display(singular_B)
+
+        abst_alg_B = map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring), P)
+
+        
         error("Not Implemented. Still in development...")
         
-        # Do singular Groebner things
-        #
-        # Methinks it's better to have the user give a GB as an input and set a groebner_basis=true option.
         
         #0. Convert AbstractAlgebra polys to Singular polys. [Might need to write converter.]
 
-        # sing_ring
-        # converted polynomials
         
         ## 1. Compute the singular groebner basis
         # id = Singular.Ideal( sing_ring , sing_polys )
@@ -231,3 +250,4 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
     
     return Farr, N*X
 end
+
