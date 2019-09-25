@@ -128,6 +128,29 @@ function solve_macaulay(P  ;
                 time()-t0, "(s)"); t0 = time()
         
         @time N = nullspace(R)[2]
+
+                
+        println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
+        println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
+
+        # The idea of the QR step is two-fold:
+        # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
+        #    set (here, IdL0).
+        #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form
+        #    a well-conditioned submatrix.
+        #
+        # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
+        #    coordinates is not important in the final step, when the eigenvalues are calulated.
+        #
+        F, Nr = iwasawa_step(N, L0)
+        B = permute_and_divide_by_x0(L0, F, ish)
+
+        println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
+
+        
+        M = mult_matrices(B, X, Nr, L, ish)
+        println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
+
         
     elseif tnf_method == "groebner"
         
@@ -138,33 +161,37 @@ function solve_macaulay(P  ;
         sing_R,sing_vars = Singular.PolynomialRing(Singular.QQ,
                                               ["xx" * string(i) for i=1:nvars(the_ring)] )
 
-
         singular_id_basis = map(f-> rauls_change_base_ring(f, Singular.QQ, sing_R), P)
-
+        
         singular_id    = Singular.Ideal(sing_R, singular_id_basis)
-        singular_id_gb = Singular.slimgb(id)
+        singular_id_gb = Singular.std(singular_id)
         singular_B     = Singular.kbase(singular_id_gb)
-        
-        display(singular_B)
 
-        abst_alg_B = map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring), P)
 
-        
-        error("Not Implemented. Still in development...")
-        
-        
-        #0. Convert AbstractAlgebra polys to Singular polys. [Might need to write converter.]
+        abst_alg_gb= map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring),
+                         gens(singular_id_gb))
+        abst_alg_B = map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring),
+                         gens(singular_B))
 
-        
-        ## 1. Compute the singular groebner basis
-        # id = Singular.Ideal( sing_ring , sing_polys )
-        # @time G = Singular.slimgb(id);
+        ## Construct one multiplication matrix.
 
-        ## 2. Construct basis of quotient R/id
-        # B = Singular.kbase(G)
-      
+        xi_operators = []
+        for v in vcat([the_ring(1)], X)
+            push!(xi_operators, [ divrem(v*b, abst_alg_gb)[2] for b in abst_alg_B] )
+        end
+
+        # TODO: Allow the user to specify the prime here.
+        Qp = PadicField(32003,10)
+
+        ## It looks like the conversion to a padic is not so good here.
+        M = [ matrix(Qp,  [ [coeff( g, b) for b in abst_alg_B]
+                            for g in op]) for op in xi_operators ]        
+        
+        M = [m.entries for m in M]
+
+        display(M[1]) # The identity matrix is not sent to the identity. Something went very wrong.
+        
         ## 3. Turn Groebner basis into matrix N.
-        # reconvert B elements into AbstractAlgebra polynomials.
         # compute the matrix
         # change coefficient ring to Qp
 
@@ -176,27 +203,6 @@ function solve_macaulay(P  ;
         # Question: How to decide the right precision for the user at this stage???
         
     end
-        
-    println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
-    println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
-
-    # The idea of the QR step is two-fold:
-    # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
-    #    set (here, IdL0).
-    #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form
-    #    a well-conditioned submatrix.
-    #
-    # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
-    #    coordinates is not important in the final step, when the eigenvalues are calulated.
-    #
-    F, Nr = iwasawa_step(N, L0)
-    B = permute_and_divide_by_x0(L0, F, ish)
-
-    println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
-
-    
-    M = mult_matrices(B, X, Nr, L, ish)
-    println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
 
     if test_mode
         println("TESTING MODE: Computation incomplete. Returning partial result.")

@@ -263,7 +263,5 @@ using pAdicSolver
 
 P = map(f->rauls_change_base_ring(f,FlintQQ, Hecke.PolynomialRing(FlintQQ, 40)[1]), gens(G))
 
-
-
 solve_macaulay(P, tnf_method="groebner")
 

@@ -6,8 +6,11 @@
 
 export rauls_change_base_ring
 
+
 function (R::Singular.Rationals)(a::Hecke.fmpq)
-    return R(a.num//a.den)
+    num = convert(BigInt, numerator(a))
+    den = convert(BigInt, denominator(a))
+    return R( num // den)
 end
 
 function (R::Hecke.FlintRationalField)(a::Singular.n_Q)
