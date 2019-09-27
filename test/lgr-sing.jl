@@ -7,7 +7,7 @@ function random_linear_equations(R::Singular.PolyRing)
     return (transpose(var_vec)*rand_vec)
 end
 
-R, vars =
+R, Rvars =
     Singular.PolynomialRing(Singular.QQ,
     #PolynomialRing(Singular.N_ZpField(32003),
                    ["x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12",
@@ -243,15 +243,14 @@ ps = [
   "-x5^2-x25*x31+x26*x38",
 "x1^2+x25*x27-x26*x34"]
 
-(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34, x35, x36, x37, x38, x39, x40) = vars
+(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21, x22, x23, x24, x25, x26, x27, x28, x29, x30, x31, x32, x33, x34, x35, x36, x37, x38, x39, x40) = Rvars
 
-id = Singular.Ideal(R, [eval(Meta.parse("$p")) for p in ps])
-idl = Singular.Ideal(R, [random_linear_equations(R) for i = 1:11])
+sid   = Singular.Ideal(R, [eval(Meta.parse("$p")) for p in ps])
+sidl  = Singular.Ideal(R, [random_linear_equations(R) for i = 1:11])
+sidl2 = Singular.Ideal(R, [ Rvars[j] - R(rand(-1000:1000)) for j=vcat(26:28, 30, 34:40) ])
 
-idl2 = Singular.Ideal(R, [ vars[j] - R(rand(-1000:1000)) for j=vcat(26:28, 30, 34:40) ])
-
-@time id = id + idl2
-@time G = Singular.std(id);
+@time sid = sid + sidl2
+@time G = Singular.std(sid);
 
 # basis of quotient R/id
 B = Singular.kbase(G)
@@ -261,7 +260,10 @@ B = Singular.kbase(G)
 using Hecke
 using pAdicSolver
 
-P = map(f->rauls_change_base_ring(f,FlintQQ, Hecke.PolynomialRing(FlintQQ, 40, ordering=:degrevlex)[1]), gens(G))
+#P = map(f->rauls_change_base_ring(f,FlintQQ, Hecke.PolynomialRing(FlintQQ, 40, ordering=:degrevlex)[1]), gens(G))
 
-sol = solve_macaulay(P, tnf_method="groebner", eigenvector_method="tropical")
+P = gens(G)
 
+sol = solve_macaulay(P, groebner=true, eigenvector_method="tropical")
+
+nothing

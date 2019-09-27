@@ -87,15 +87,18 @@ The options specify strategy parameters.
 #-------------------
 
 INPUTS:
-- P   -- polynomial system, a Vector of AbstractAlgebra polynomials.
-- rho -- monomial degree of the system. Default is the macaulay degree.
-- tnf_method -- Strategy used to obtain a truncated normal form. Default is solving for the nullspace of the Macaulay matrix over Qp.
+- P        -- polynomial system, a Vector of AbstractAlgebra polynomials.
+- rho      -- monomial degree of the system. Default is the macaulay degree.
+- groebner -- Boolean indicating if the polynomial ring is already a groebner basis 
+              w.r.t the ambient ring ordering.
 - eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
 
 """
+# Should have a verbose parameter.
+
 function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}  ;
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
-                        tnf_method :: String = "padic",
+                        groebner :: Bool = true,
                         eigenvector_method :: String = "power",
                         test_mode :: Bool = false )
 
@@ -118,7 +121,30 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
 
     t0 = time()
 
-    if tnf_method == "padic"
+    if groebner                
+        ## Construct the multiplication matrices directly.
+        B = kbase_gens_from_GB(P)
+
+        xi_operators = []
+        for v in vcat([the_ring(1)], X)
+            push!(xi_operators, [rem(v*b, P) for b in B] )
+        end
+
+        # TODO: The user should specify the prime.
+        Qp = PadicField(23,30)
+        
+        M = [matrix(Qp,  [ [coeff(g, b) for b in B] for g in op])
+             for op in xi_operators ]        
+        
+        M = [m.entries for m in M]
+
+        ## The prime will be specified by the user..
+        ## The precsion should also be specified, or the user should request
+        ## some feature to be invoked.
+
+        # Question: How to decide the right precision for the user at this stage???        
+
+    else
         R, L = macaulay_mat(P, X, rho, ish)           
     
         L0 = monomials_divisible_by_x0(L, ish)
@@ -127,8 +153,7 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
                 time()-t0, "(s)"); t0 = time()
         
         @time N = nullspace(R)[2]
-
-                
+  
         println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
         println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
 
@@ -149,51 +174,6 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
         
         M = mult_matrices(B, X, Nr, L, ish)
         println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
-
-        
-    elseif tnf_method == "groebner"
-        
-        # With this name, we should compute the grobner basis. 
-                
-        @assert base_ring(the_ring) == FlintQQ
-
-        sing_R,sing_vars = Singular.PolynomialRing(Singular.QQ,
-                                                   ["xx" * string(i) for i=1:nvars(the_ring)],
-                                                   ordering=:degrevlex)
-
-        singular_id_basis = map(f-> rauls_change_base_ring(f, Singular.QQ, sing_R), P)
-        
-        singular_id    = Singular.Ideal(sing_R, singular_id_basis)
-        singular_id_gb = Singular.std(singular_id)
-        singular_B     = Singular.kbase(singular_id_gb)
-
-
-        abst_alg_gb= map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring),
-                         gens(singular_id_gb))
-        abst_alg_B = map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring),
-                         gens(singular_B))
-
-        ## Construct the multiplication matrices.
-
-        xi_operators = []
-        for v in vcat([the_ring(1)], X)
-            push!(xi_operators, [ divrem(v*b, abst_alg_gb)[2] for b in abst_alg_B] )
-        end
-
-        # TODO: The user should specify the prime.
-        Qp = PadicField(23,30)
-
-        ## It looks like the conversion to a padic is not so good here.
-        M = [ matrix(Qp,  [ [coeff( g, b) for b in abst_alg_B] for g in op])
-              for op in xi_operators ]        
-        
-        M = [m.entries for m in M]
-
-        ## The prime will be specified by the user..
-        ## The precsion should also be specified, or the user should request
-        ## some feature to be invoked.
-
-        # Question: How to decide the right precision for the user at this stage???        
     end
 
     if test_mode
@@ -201,12 +181,52 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
         return M, F, B, N, Nr, R, IdL0, Idx
     end
 
-    Xi = normalized_simultaneous_eigenvalues(M,ish, eigenvector_method)
+    Xi = normalized_simultaneous_eigenvalues(M, ish, eigenvector_method)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
 
     # In the affine system, the distinguished monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
     if ish return Xi else return  Xi[:,2:size(Xi,2)] end
+end
+
+##############
+
+function (R::FlintPadicField)(a::Singular.n_Q)
+    return R(FlintQQ(a))
+end
+
+function kbase_gens_from_GB(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
+
+    the_ring = parent(P[1])
+    @assert base_ring(the_ring) == FlintQQ
+    
+    sing_R,sing_vars = Singular.PolynomialRing(Singular.QQ,
+                                               ["x$i" for i=1:nvars(the_ring)],
+                                               ordering=ordering(the_ring))
+    
+    singular_B = kbase_gens_from_GB(map(f-> rauls_change_base_ring(f, Singular.QQ, sing_R), P))
+
+    return map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring), singular_B)
+end
+
+function kbase_gens_from_GB(P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
+    I = Singular.Ideal(parent(P[1]), P)
+    I.isGB = true
+    return gens(Singular.kbase(I))
+end
+
+import Base.rem
+function rem(f::Hecke.Generic.MPolyElem{<:Hecke.FieldElem},
+             P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
+    return divrem(f,P)[2]
+end
+
+function rem(f::Singular.spoly{<:Hecke.FieldElem},
+             P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
+
+    I = Singular.Ideal(parent(P[1]), P)
+    I.isGB = true
+    return Singular.reduce(f, I)
 end
 
 
