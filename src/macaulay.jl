@@ -93,7 +93,7 @@ INPUTS:
 - eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
 
 """
-function solve_macaulay(P  ;
+function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}  ;
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
                         tnf_method :: String = "padic",
                         eigenvector_method :: String = "power",
@@ -108,7 +108,6 @@ function solve_macaulay(P  ;
     # The input type is likely important for this consideration.
     
     the_ring = parent(P[1])
-    
     X = gens(the_ring)
     
     println()
@@ -159,7 +158,8 @@ function solve_macaulay(P  ;
         @assert base_ring(the_ring) == FlintQQ
 
         sing_R,sing_vars = Singular.PolynomialRing(Singular.QQ,
-                                              ["xx" * string(i) for i=1:nvars(the_ring)] )
+                                                   ["xx" * string(i) for i=1:nvars(the_ring)],
+                                                   ordering=:degrevlex)
 
         singular_id_basis = map(f-> rauls_change_base_ring(f, Singular.QQ, sing_R), P)
         
@@ -173,35 +173,27 @@ function solve_macaulay(P  ;
         abst_alg_B = map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring),
                          gens(singular_B))
 
-        ## Construct one multiplication matrix.
+        ## Construct the multiplication matrices.
 
         xi_operators = []
         for v in vcat([the_ring(1)], X)
             push!(xi_operators, [ divrem(v*b, abst_alg_gb)[2] for b in abst_alg_B] )
         end
 
-        # TODO: Allow the user to specify the prime here.
-        Qp = PadicField(32003,10)
+        # TODO: The user should specify the prime.
+        Qp = PadicField(23,30)
 
         ## It looks like the conversion to a padic is not so good here.
-        M = [ matrix(Qp,  [ [coeff( g, b) for b in abst_alg_B]
-                            for g in op]) for op in xi_operators ]        
+        M = [ matrix(Qp,  [ [coeff( g, b) for b in abst_alg_B] for g in op])
+              for op in xi_operators ]        
         
         M = [m.entries for m in M]
-
-        display(M[1]) # The identity matrix is not sent to the identity. Something went very wrong.
-        
-        ## 3. Turn Groebner basis into matrix N.
-        # compute the matrix
-        # change coefficient ring to Qp
-
 
         ## The prime will be specified by the user..
         ## The precsion should also be specified, or the user should request
         ## some feature to be invoked.
 
-        # Question: How to decide the right precision for the user at this stage???
-        
+        # Question: How to decide the right precision for the user at this stage???        
     end
 
     if test_mode
@@ -212,8 +204,8 @@ function solve_macaulay(P  ;
     Xi = normalized_simultaneous_eigenvalues(M,ish, eigenvector_method)
     println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
 
-    # In the affine system, the distinguished monomial (i.e, "1" for that case) does not correspond
-    # to a coordinate.
+    # In the affine system, the distinguished monomial (i.e, "1" for that case) does 
+    # not correspond to a coordinate.
     if ish return Xi else return  Xi[:,2:size(Xi,2)] end
 end
 

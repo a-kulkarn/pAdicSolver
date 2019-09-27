@@ -261,7 +261,7 @@ B = Singular.kbase(G)
 using Hecke
 using pAdicSolver
 
-P = map(f->rauls_change_base_ring(f,FlintQQ, Hecke.PolynomialRing(FlintQQ, 40)[1]), gens(G))
+P = map(f->rauls_change_base_ring(f,FlintQQ, Hecke.PolynomialRing(FlintQQ, 40, ordering=:degrevlex)[1]), gens(G))
 
-solve_macaulay(P, tnf_method="groebner")
+sol = solve_macaulay(P, tnf_method="groebner", eigenvector_method="tropical")
 
