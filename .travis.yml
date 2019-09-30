@@ -22,11 +22,12 @@ addons:
            - liblapack-dev
            - libgmp-dev
            - libmpfr-dev
- 
 
 notifications:
   - email: false
-
+script:
+  - while sleep 30; do echo "still alive"; done &
+  - julia -e 'using Pkg; Pkg.build("Singular"); Pkg.test("Singular");'
 
 env:
    global:
@@ -41,7 +42,6 @@ jobs:
         - while sleep 30; do echo "still alive"; done &
 	- julia -e 'using Pkg; Pkg.build("Singular");'
 
-        - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd()));
-                                               Pkg.instantiate()'
+        - julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
         - julia --project=docs/ docs/make.jl
       after_success: skip
