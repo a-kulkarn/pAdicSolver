@@ -105,10 +105,6 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
     # This solve function could be made to work with polynomials with FlintRR coefficients
     # as well, though this requires managing the type dispatch a bit and remodeling the
     # old DynamicPolynomials based subfunctions.
-
-    # TODO: There is some question about the call signature, on whether the groebner option
-    # should accept a groebner basis as input, or if this should be computed on the fly.
-    # The input type is likely important for this consideration.
     
     the_ring = parent(P[1])
     X = gens(the_ring)
