@@ -10,7 +10,7 @@ Qp = PadicField(31,10)
 
 
 failed_test_count = 0
-for n in [2,4,6]
+for n in [2,4,5]
 
     R, vars = PolynomialRing(Qp, n+1)
     d = 2

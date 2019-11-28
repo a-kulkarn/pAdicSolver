@@ -1,6 +1,8 @@
 
 # pAdic solver
 
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://a-kulkarn.github.io/pAdicSolvers/latest)
+
 Package for solving 0-dimensional padic polynomial systems. Examples for usage are contained in the "/test/" directory.
 
 - Dense polynomial system solver for p-adic polynomial systems.
