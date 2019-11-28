@@ -13,7 +13,7 @@ n = length(gens(R))
 
 include(".cubic_surface_eqns.jl")
 
-sol = solve_macaulay(P, rho=5, eigenvector_method="tropical")
+sol = solve_macaulay(P, rho=5, groebner=false, eigenvector_method="tropical")
 #matlist, F, B, N, Nr = solve_macaulay(P, gens(R), rho=4, test_mode=true);
 
 #A = matrix(matlist[1]);

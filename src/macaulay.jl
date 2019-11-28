@@ -98,7 +98,7 @@ INPUTS:
 
 function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}  ;
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
-                        groebner :: Bool = true,
+                        groebner :: Bool = false,
                         eigenvector_method :: String = "power",
                         test_mode :: Bool = false )
 
