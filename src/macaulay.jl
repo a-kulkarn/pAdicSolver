@@ -98,7 +98,6 @@ INPUTS:
 
 function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}  ;
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
-                        groebner :: Bool = false,
                         eigenvector_method :: String = "power",
                         test_mode :: Bool = false )
 
@@ -117,60 +116,36 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
 
     t0 = time()
 
-    if groebner                
-        ## Construct the multiplication matrices directly.
-        B = kbase_gens_from_GB(P)
-
-        xi_operators = []
-        for v in vcat([the_ring(1)], X)
-            push!(xi_operators, [rem(v*b, P) for b in B] )
-        end
-
-        # TODO: The user should specify the prime.
-        Qp = PadicField(23,30)
-        
-        M = [matrix(Qp,  [ [coeff(g, b) for b in B] for g in op])
-             for op in xi_operators ]        
-        
-        M = [m.entries for m in M]
-
-        ## The prime will be specified by the user..
-        ## The precsion should also be specified, or the user should request
-        ## some feature to be invoked.
-
-        # Question: How to decide the right precision for the user at this stage???        
-
-    else
-        R, L = macaulay_mat(P, X, rho, ish)           
+    R, L = macaulay_mat(P, X, rho, ish)           
     
-        L0 = monomials_divisible_by_x0(L, ish)
+    L0 = monomials_divisible_by_x0(L, ish)
     
-        println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",
-                time()-t0, "(s)"); t0 = time()
-        
-        @time N = nullspace(R)[2]
-  
-        println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
-        println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
+    println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",
+            time()-t0, "(s)"); t0 = time()
+    
+    @time N = nullspace(R)[2]
+    
+    println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
+    println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
 
-        # The idea of the QR step is two-fold:
-        # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
-        #    set (here, IdL0).
-        #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form
-        #    a well-conditioned submatrix.
-        #
-        # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
-        #    coordinates is not important in the final step, when the eigenvalues are calulated.
-        #
-        F, Nr = iwasawa_step(N, L0)
-        B = permute_and_divide_by_x0(L0, F, ish)
+    # The idea of the QR step is two-fold:
+    # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
+    #    set (here, IdL0).
+    #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form
+    #    a well-conditioned submatrix.
+    #
+    # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
+    #    coordinates is not important in the final step, when the eigenvalues are calulated.
+    #
+    F, Nr = iwasawa_step(N, L0)
+    B = permute_and_divide_by_x0(L0, F, ish)
 
-        println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
+    println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
 
-        
-        M = mult_matrices(B, X, Nr, L, ish)
-        println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
-    end
+    
+    M = mult_matrices(B, X, Nr, L, ish)
+    println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
+
 
     if test_mode
         println("TESTING MODE: Computation incomplete. Returning partial result.")
@@ -178,7 +153,7 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
     end
 
     Xi = normalized_simultaneous_eigenvalues(M, ish, eigenvector_method)
-    println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
+    println("-- Eigen diag", "   ", time()-t0, "(s)"); t0 = time()
 
     # In the affine system, the distinguished monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
@@ -217,8 +192,8 @@ function rem(f::Hecke.Generic.MPolyElem{<:Hecke.FieldElem},
     return divrem(f,P)[2]
 end
 
-function rem(f::Singular.spoly{<:Hecke.FieldElem},
-             P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
+function rem(f::Singular.spoly{<:T where T},
+             P::Array{<:Singular.spoly{<:T where T},1})
 
     I = Singular.Ideal(parent(P[1]), P)
     I.isGB = true
