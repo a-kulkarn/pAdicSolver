@@ -16,7 +16,7 @@ P = [x2 - (x1^2 - 1), x2]
 
 # Launch solver
 I = Singular.Ideal(R, P)
-sol = padic_solutions(I, Qp, eigenvector_method = "power")
+sol = padic_solutions(I, Qp, eigenvector_method="qr")
 
 println("\n-- sol ")
 println(sol,"\n")

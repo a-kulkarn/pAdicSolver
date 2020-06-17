@@ -108,7 +108,9 @@ function normalize_solution!(Xi, ish)
                 
                 Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
             else
-                Sol[i,:] *= inv(scale_factor)
+                for j in length(Sol[i,:])
+                    Sol[i,j] *= inv(scale_factor)
+                end
                 i+=1
             end
         end
@@ -153,6 +155,8 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     #println()
     #println("eigspaces: ", length(invariant_subspaces.spaces))
 
+    @info "" X
+    
     if method != "tropical"
         sol_array = Array{Array{padic,1},1}()
         for j in 1:length(M)
@@ -160,12 +164,26 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
             # Put the other matrix into schur form
             Y= inv(V)*(I0*M[j])*V
-            
+
+            # We only want to extract the blocks of size 1.
             for i=1:size(X,2)
-                if (i==1 && iszero(X[i,i+1])) ||
-                    (i==size(X,2) && iszero(X[i-1,i]) ) ||
-                    (iszero(X[i,i-1]) && iszero(X[i+1,i]))
-                    
+                # Edge cases.
+                if i == 1
+                    if iszero(X[i+1,i])
+                        push!(sol_array[j], Y[i,i])
+                    end
+                    continue
+                end
+
+                if i == size(X,2)
+                    if iszero(X[i,i-1])
+                        push!(sol_array[j], Y[i,i])
+                    end
+                    continue
+                end
+
+                # The edge cases are out of the way.
+                if iszero(X[i,i-1]) && iszero(X[i+1,i])
                     push!(sol_array[j], Y[i,i])
                 end
             end
