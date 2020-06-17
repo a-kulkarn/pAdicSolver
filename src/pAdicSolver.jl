@@ -22,5 +22,7 @@ module pAdicSolver
   #include("newton.jl")
   #include("toric.jl")
 
+  # Requires Singular.jl
+  include("solver.jl")
 
 end

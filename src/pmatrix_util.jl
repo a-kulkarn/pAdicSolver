@@ -92,6 +92,33 @@ function normalized_simultaneous_eigenvalues(
     return normalize_solution!(X, ish)
 end
 
+
+## Internal function to normalize solutions.
+function normalize_solution!(Xi, ish)
+    Sol = Xi
+    
+    if (!ish)
+        i=1            
+        while i <= size(Sol,1)
+            scale_factor = Sol[i,1]
+            if iszero(scale_factor)
+                println()
+                println("!-- Ignoring solution at infinity --!")
+                println()
+                
+                Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
+            else
+                Sol[i,:] *= inv(scale_factor)
+                i+=1
+            end
+        end
+        #else
+        # do nothing otherwise, for now.
+    end
+    return Sol
+end
+
+
 @doc Markdown.doc"""
     nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
             --> eigenvalue_matrix :: Hecke.Generic.MatElem{T}
@@ -129,6 +156,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     if method != "tropical"
         sol_array = Array{Array{padic,1},1}()
         for j in 1:length(M)
+            push!(sol_array, Array{padic,1}())
 
             # Put the other matrix into schur form
             Y= inv(V)*(I0*M[j])*V
@@ -142,7 +170,10 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
                 end
             end
         end
-        return normalize_solution(Xi, ish)
+
+        @info "" sol_array
+        
+        return normalize_solution!(hcat(sol_array...), ish)
     end
 
     if method == "tropical"
@@ -187,31 +218,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
         #return hcat( sol_array[2:length(sol_array)]...)
         return hcat( sol_array...)
     end
-    
-    function normalize_solution!(Xi, ish)
-        Sol = Xi
         
-        if (!ish)
-            i=1            
-            while i <= size(Sol,1)
-                scale_factor = Sol[i,1]
-                if iszero(scale_factor)
-                    println()
-                    println("!-- Ignoring solution at infinity --!")
-                    println()
-                    
-                    Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
-                else
-                    Sol[i,:] *= inv(scale_factor)
-                    i+=1
-                end
-            end
-        #else
-            # do nothing otherwise, for now.
-        end
-        return Sol
-    end
-    
     return normalize_solution!(X, ish)
     
 end

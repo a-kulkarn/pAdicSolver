@@ -262,8 +262,10 @@ using pAdicSolver
 
 #P = map(f->rauls_change_base_ring(f,FlintQQ, Hecke.PolynomialRing(FlintQQ, 40, ordering=:degrevlex)[1]), gens(G))
 
-P = gens(G)
+#P = gens(G)
 
-sol = solve_macaulay(P, groebner=true, eigenvector_method="tropical")
+#sol = solve_macaulay(P, groebner=true, eigenvector_method="tropical")
+
+sol = padic_solutions(G, PadicField(23,10))
 
 nothing
