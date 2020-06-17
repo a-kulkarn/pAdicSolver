@@ -54,6 +54,9 @@ function padic_solutions(I::Singular.sideal{<:Singular.spoly{<:T}} where T, R;
     if ish return Xi else return  Xi[:,2:size(Xi,2)] end
 end
 
-function padic_solutions(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
-    return true
+function padic_solutions(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}, R;
+                         eigenvector_method="power")
+    
+    @assert base_ring(parent(P[1])) == R
+    return solve_macaulay(P, eigenvector_method=eigenvector_method)
 end

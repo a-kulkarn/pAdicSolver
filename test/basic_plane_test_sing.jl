@@ -13,10 +13,10 @@ n = length(gens(R))
 # Create the simple polynomials.
 P = [x2 - (x1^2 - 1), x2]
 
-
 # Launch solver
 I = Singular.Ideal(R, P)
-sol = padic_solutions(I, Qp, eigenvector_method="qr")
+sol = padic_solutions(I, Qp, eigenvector_method="power")
+
 
 println("\n-- sol ")
 println(sol,"\n")

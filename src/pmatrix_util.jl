@@ -191,7 +191,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
         @info "" sol_array
         
-        return normalize_solution!(hcat(sol_array...), ish)
+        return normalize_solution!(matrix(hcat(sol_array...)), ish)
     end
 
     if method == "tropical"
