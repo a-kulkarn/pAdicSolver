@@ -1,5 +1,17 @@
 export padic_solutions
 
+import Hecke.ishomogeneous
+function ishomogeneous(I::Singular.sideal)
+    G = Singular.gens(I)
+    return all(ishomogeneous, G)
+end
+
+function ishomogeneous(f::Singular.spoly)
+    d = total_degree(first(monomials(f)))
+    return all(m->total_degree(m)==d, monomials(f))
+end
+
+
 function truncated_normal_form(I::Singular.sideal{<:Singular.spoly{<:T}} where T)
     return Singular.std(I)
 end
@@ -7,12 +19,16 @@ end
 function padic_solutions(I::Singular.sideal{<:Singular.spoly{<:T}} where T, R;
                          eigenvector_method="power")
 
+    # Presently, the user is responsible for providing the padic ring R.
+    #
+    # Question: Is it possible to decide the right precision for the user at this stage?
+
     @info "Computation started..."
 
     base_ring = Singular.base_ring(I)
     X  = gens(base_ring)
     GB = truncated_normal_form(I)
-    ish = false
+    ish = ishomogeneous(GB)
 
     ## Construct the multiplication matrices directly.
     B = Singular.gens(Singular.kbase(GB))
@@ -29,15 +45,9 @@ function padic_solutions(I::Singular.sideal{<:Singular.spoly{<:T}} where T, R;
 
     @info "" M[1] M[2] M[3]
     
-    ## The prime will be specified by the user..
-    ## The precsion should also be specified, or the user should request
-    ## some feature to be invoked.
-
-    # Question: How to decide the right precision for the user at this stage???        
-
     t0 = time()
     Xi = normalized_simultaneous_eigenvalues(M, ish, eigenvector_method)
-    println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
+    println("-- Eigen diag",  "   ", time()-t0, "(s)"); t0 = time()
 
     # In the affine system, the distinguished monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
