@@ -6,7 +6,7 @@ using pAdicSolver
 Qp = PadicField(491,3)
 
 
-R, (x1,x2) = PolynomialRing(Qp, ["x1", "x2"])
+R, (x1,x2) = pAdicSolver.PolynomialRing(Qp, ["x1", "x2"])
 n = length(gens(R))
 
 d = 10
@@ -19,7 +19,7 @@ for i=1:10
         global P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
 
         #matlist, F, B, N, Nr, RR, IdL0, IdL = solve_macaulay(P,gens(R), test_mode=true);
-        sol = solve_macaulay(P)
+        sol = padic_solutions(P, Qp)
 
         println("\n-- sol ")
         println(sol,"\n")

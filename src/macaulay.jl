@@ -194,8 +194,7 @@ function solve_macaulay_II(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}
     # TODO: Need to figure out what to do with missing monomials.
     
     Nr, B = truncated_normal_form_section(N, L, L0, ish)
-
-
+   
     verbose && println("-- Qr basis ",  length(B), "   ", time()-t0, "(s)");
     t0 = time()
 
@@ -263,14 +262,19 @@ function truncated_normal_form_section(N, L, L0, ish)
 
     # TODO: The result of this output should be mathematically meaningful.
     Nr, B = iwasawa_step(N, L0, ish)
+    
+    # Turn B into an algebra basis.
+    if ish
+        B = Dict(Dory.divexact(m, gens(parent(m))[1])=>i for (m,i) in B)
+    end
+ 
 
     @info "" L0 typeof(L0)
-
+    @info "" B
+    
     # TODO: This part could be organized better.
     #B = permute_and_divide_by_x0(L0, F, ish)
 
-    @info "" B
-    
     return Nr, B # Not actually a section, but whatever.
 end
 
@@ -300,6 +304,9 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
     Fpinv = Dory.inverse_permutation(F.p)
 
     X = transpose(Qinv[Fpinv,:])
+
+    X = transpose(Qinv)[Fpinv,:]
+    
     #Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
 
     
@@ -310,21 +317,19 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
     # Extract the column to monomial correspondence.    
     key_array = first.(sort(collect(L0), by=x->x[2]))
 
-    if ish
-        for i in 1:m
-            m = copy(key_array[F.q[i]])
-            push!(B, Dory.divexact(m, gens(parent(m))[1])=>i)
-            # should test if the diag. coeff. is not small
-        end
-    else
-        for i in 1:m
-            push!(B,  key_array[F.q[i]]=>i)
-            # should test if the diag. coeff. is not small
-        end
+    for i in 1:m
+        push!(B,  key_array[F.q[i]]=>i)
+        # should test if the diag. coeff. is not small
     end
- 
-    #return B
 
+    Nr = N*X
+
+    test_rows = sorted_column_labels[F.q[1:m]]
+
+    @info "" test_rows
+    
+    @info "" valuation.(Nr[test_rows, :].entries)
+    
     return N*X, B
 end
 
