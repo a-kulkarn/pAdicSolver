@@ -155,8 +155,6 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     #println()
     #println("eigspaces: ", length(invariant_subspaces.spaces))
 
-    @info "" X
-    
     if method != "tropical"
         sol_array = Array{Array{padic,1},1}()
         for j in 1:length(M)
@@ -188,8 +186,6 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
                 end
             end
         end
-
-        @info "" sol_array
         
         return normalize_solution!(matrix(hcat(sol_array...)), ish)
     end

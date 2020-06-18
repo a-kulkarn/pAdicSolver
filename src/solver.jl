@@ -16,14 +16,16 @@ function truncated_normal_form(I::Singular.sideal{<:Singular.spoly{<:T}} where T
     return Singular.std(I)
 end
 
+"""
+Returns the affine solutions to the polynomial equations defined by I.
+The system must be 0 dimensional.
+"""
 function padic_solutions(I::Singular.sideal{<:Singular.spoly{<:T}} where T, R;
                          eigenvector_method="power")
 
     # Presently, the user is responsible for providing the padic ring R.
     #
     # Question: Is it possible to decide the right precision for the user at this stage?
-
-    @info "Computation started..."
 
     base_ring = Singular.base_ring(I)
     X  = gens(base_ring)
@@ -39,16 +41,14 @@ function padic_solutions(I::Singular.sideal{<:Singular.spoly{<:T}} where T, R;
     end
 
     
-    M = [matrix(R, [[coeff(g, b) for b in B] for g in op]) for op in xi_operators]
-    
+    M = [matrix(R, [[coeff(g, b) for b in B] for g in op]) for op in xi_operators]    
     M = [m.entries for m in M]
 
-    @info "" M[1] M[2] M[3]
+    # @info "" M[1] M[2] M[3]
     
     t0 = time()
     Xi = normalized_simultaneous_eigenvalues(M, ish, eigenvector_method)
-    println("-- Eigen diag",  "   ", time()-t0, "(s)"); t0 = time()
-
+    
     # In the affine system, the distinguished monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
     if ish return Xi else return  Xi[:,2:size(Xi,2)] end
@@ -58,5 +58,5 @@ function padic_solutions(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1
                          eigenvector_method="power")
     
     @assert base_ring(parent(P[1])) == R
-    return solve_macaulay(P, eigenvector_method=eigenvector_method)
+    return solve_macaulay_II(P, eigenvector_method=eigenvector_method)
 end

@@ -96,7 +96,7 @@ INPUTS:
 """
 # Should have a verbose parameter.
 
-function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}  ;
+function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1};
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
                         eigenvector_method :: String = "power",
                         test_mode :: Bool = false )
@@ -109,7 +109,7 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
     X = gens(the_ring)
     
     println()
-    println("-- Degrees ", map(p->total_degree(p),P))
+    println("\n-- Degrees ", map(p->total_degree(p),P))
     
     ish = !any(is_not_homogeneous, P)
     println("-- Homogeneity ", ish)
@@ -140,6 +140,9 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
     F, Nr = iwasawa_step(N, L0)
     B = permute_and_divide_by_x0(L0, F, ish)
 
+    @info "" B
+    @info "" L
+
     println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
 
     
@@ -161,6 +164,111 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
 end
 
 ##############
+# Improvement to the solve_macaulay function.
+
+
+function solve_macaulay_II(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1};
+                           rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                           eigenvector_method :: String = "power",
+                           verbose::Bool = false,
+                           test_mode :: Bool = false )
+
+
+    
+    # This solve function could be made to work with polynomials with FlintRR coefficients
+    # as well, though this requires managing the type dispatch a bit and remodeling the
+    # old DynamicPolynomials based subfunctions.
+    
+    the_ring = parent(P[1])
+    X = gens(the_ring)
+    ish = !any(is_not_homogeneous, P)
+
+
+    # Compute the truncated normal form
+    #
+    # Return the map N, together with
+    # the sets of monomials (V,B), with N|B the identity.
+
+    N, L, L0 = truncated_normal_form_map(P, rho=rho, verbose=verbose)
+
+    # TODO: Need to figure out what to do with missing monomials.
+    
+    Nr, B = truncated_normal_form_section(N, L, L0, ish)
+
+
+    verbose && println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)");
+    t0 = time()
+
+    
+    M = mult_matrices(B, X, Nr, L, ish)
+    verbose && println("-- Mult matrices ",time()-t0, "(s)");
+    t0 = time()
+
+
+    if test_mode
+        println("TESTING MODE: Computation incomplete. Returning partial result.")
+        return M, F, B, N, Nr, R, IdL0, Idx
+    end
+
+    # Eigenvector step.
+    Xi = normalized_simultaneous_eigenvalues(M, ish, eigenvector_method)
+
+    verbose && println("-- Eigen diag", "   ", time()-t0, "(s)");
+    t0 = time()
+
+    # In the affine system, the distinguished monomial (i.e, "1" for that case) does 
+    # not correspond to a coordinate.
+    if ish return Xi else return  Xi[:,2:size(Xi,2)] end
+
+    
+end
+    
+##############
+
+function truncated_normal_form_map(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1};
+                                   rho::Integer= sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                                   verbose=false)
+
+    the_ring = parent(P[1])
+    X = gens(the_ring)
+    ish = !any(is_not_homogeneous, P)
+
+    t0 = time()
+
+    #TODO: This breaks in some cases due to L0 not being a kbase sometimes.
+    R, L = macaulay_mat(P, X, rho, ish)
+    L0 = monomials_divisible_by_x0(L, ish) 
+    
+    verbose && println("-- Macaulay matrix ", size(R,1), "x", size(R,2),  "   ", time()-t0, "(s)");
+    t0 = time()
+    
+    @time N = nullspace(R)[2]
+
+    verbose && println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
+    verbose && println("-- Null space ", size(N,1), "x", size(N,2), "   ", time()-t0, "(s)");
+    t0 = time()
+
+    return N, L, L0    
+end
+
+function truncated_normal_form_section(N, L, L0, ish)
+    # The idea of the QR step is two-fold:
+    # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
+    #    set (here, IdL0).
+    #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form
+    #    a well-conditioned submatrix.
+    #
+    # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
+    #    coordinates is not important in the final step, when the eigenvalues are calulated.
+    #
+    F, Nr = iwasawa_step(N, L0)
+    B = permute_and_divide_by_x0(L0, F, ish)
+
+    return Nr, B # Not actually a section, but whatever.
+end
+
+##############
+
 
 function (R::FlintPadicField)(a::Singular.n_Q)
     return R(FlintQQ(a))
@@ -230,7 +338,9 @@ end
 
 function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
 
-    F = padic_qr( transpose(N[ sort(collect(values(L0))),:]) , col_pivot=Val(true))
+    sorted_column_labels = sort(collect(values(L0)))
+    
+    F = padic_qr(transpose(N[sorted_column_labels,:]), col_pivot=Val(true))
     Qinv = Dory.inv_unit_lower_triangular(F.Q)
     Fpinv= Dory.inverse_permutation(F.p)
 
