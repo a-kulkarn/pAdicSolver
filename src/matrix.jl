@@ -164,17 +164,17 @@ function permute_and_divide_by_x0(L0,F,ish)
     return B
 end
     
-
-
-# INPUTS:
-#  B -- basis for QR factorization
-#  X -- variables for the polynomial ring
-#  K -- the "R" from the QR factorization. More precisely, the transpose of R is a submatrix of K.
-#  L -- Monomials of polynomial system
-#  ish- the "is_homogeneous" boolian.
-# OUTPUT:
-# a list of matrices whose eigenvalues are the solution coordinates.
-# The matrices represent multiplication-by-xi maps  ** in Q-coordinates **
+"""
+INPUTS:
+ B -- basis for QR factorization
+ X -- variables for the polynomial ring
+ K -- the "R" from the QR factorization. More precisely, the transpose of R is a submatrix of K.
+ L -- Monomials of polynomial system
+ ish- the "is_homogeneous" boolian.
+OUTPUT:
+a list of matrices whose eigenvalues are the solution coordinates.
+The matrices represent multiplication-by-xi maps  ** in Q-coordinates **
+"""
 function mult_matrices(B, X, K, L, ish = false)
 
     # For an affine system, '1' is needed as a monomial as well.

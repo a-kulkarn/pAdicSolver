@@ -238,7 +238,7 @@ function truncated_normal_form_map(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.Fi
     R, L = macaulay_mat(P, X, rho, ish)
     L0 = monomials_divisible_by_x0(L, ish) 
     
-    verbose && println("-- Macaulay matrix ", size(R,1), "x", size(R,2),  "   ", time()-t0, "(s)");
+    verbose && println("-- Macaulay matrix ", size(R,1), "x", size(R,2), "   ", time()-t0, "(s)");
     t0 = time()
     
     @time N = nullspace(R)[2]
@@ -247,7 +247,7 @@ function truncated_normal_form_map(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.Fi
     verbose && println("-- Null space ", size(N,1), "x", size(N,2), "   ", time()-t0, "(s)");
     t0 = time()
 
-    return N, L, L0    
+    return N, L, L0
 end
 
 function truncated_normal_form_section(N, L, L0, ish)
@@ -260,14 +260,69 @@ function truncated_normal_form_section(N, L, L0, ish)
     # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
     #    coordinates is not important in the final step, when the eigenvalues are calulated.
     #
+
+    # TODO: The result of this output should be mathematically meaningful.
     F, Nr = iwasawa_step(N, L0)
+
+    @info "" L0 typeof(L0)
+
+    # TODO: This part could be organized better.
     B = permute_and_divide_by_x0(L0, F, ish)
 
+    @info "" B
+
+    @info "" F.p
+    
     return Nr, B # Not actually a section, but whatever.
 end
 
 ##############
 
+@doc Markdown.doc"""
+    iwasawa_step(N :: Array{T,2} where T <: Number, L0)
+    iwasawa_step(N :: Array{padic,2} , IdL0)
+    iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
+
+    Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
+    together with  Nr = N*inv(inv(P)Q)^T.
+"""
+
+function iwasawa_step(N :: Array{T,2} where T <: Number, L0)
+    F = qr(Array(transpose(N[IdL0,:])) , Val(true))
+    return F, N*F.Q
+end
+
+function iwasawa_step(N :: Array{padic,2} , IdL0)
+    
+    F = padic_qr( transpose(matrix(N[IdL0,:])) , col_pivot=Val(true))
+    Qinv = Dory.inv_unit_lower_triangular(F.Q)
+    Fpinv= Dory.inverse_permutation(F.p)
+
+    X = Qinv[Fpinv,:].entries    
+    Farr = QRPadicArrayPivoted( (F.Q.entries)[Fpinv,:], F.R.entries, F.q)
+    
+    return Farr, N*X
+end
+
+"""
+    Given a matrix N and a subset of rows specified by L0, return
+
+    N' -- A change of coordinates of N in the codomain.
+    B  -- A subset of L0 specifying a stable square submatrix.
+"""
+function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
+
+    sorted_column_labels = sort(collect(values(L0)))
+    
+    F = padic_qr(transpose(N[sorted_column_labels,:]), col_pivot=Val(true))
+    Qinv = Dory.inv_unit_lower_triangular(F.Q)
+    Fpinv= Dory.inverse_permutation(F.p)
+
+    X = Qinv[Fpinv,:]
+    Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
+    
+    return Farr, N*X
+end
 
 function (R::FlintPadicField)(a::Singular.n_Q)
     return R(FlintQQ(a))
@@ -307,46 +362,4 @@ end
 #     I.isGB = true
 #     return Singular.reduce(f, I)
 # end
-
-
-@doc Markdown.doc"""
-    iwasawa_step(N :: Array{T,2} where T <: Number, L0)
-    iwasawa_step(N :: Array{padic,2} , IdL0)
-    iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
-
-    Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
-    together with  Nr = N*inv(inv(P)Q)^T.
-"""
-
-function iwasawa_step(N :: Array{T,2} where T <: Number, L0)
-    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
-    return F, N*F.Q
-end
-
-function iwasawa_step(N :: Array{padic,2} , IdL0)
-    
-    F = padic_qr( transpose(matrix(N[IdL0,:])) , col_pivot=Val(true))
-    Qinv = Dory.inv_unit_lower_triangular(F.Q)
-    Fpinv= Dory.inverse_permutation(F.p)
-
-    X = Qinv[Fpinv,:].entries    
-    Farr = QRPadicArrayPivoted( (F.Q.entries)[Fpinv,:], F.R.entries, F.q)
-    
-    return Farr, N*X
-end
-
-
-function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
-
-    sorted_column_labels = sort(collect(values(L0)))
-    
-    F = padic_qr(transpose(N[sorted_column_labels,:]), col_pivot=Val(true))
-    Qinv = Dory.inv_unit_lower_triangular(F.Q)
-    Fpinv= Dory.inverse_permutation(F.p)
-
-    X = Qinv[Fpinv,:]
-    Farr = QRPadicArrayPivoted( (F.Q.entries)[Fpinv,:], F.R.entries, F.q)
-    
-    return Farr, N*X
-end
 
