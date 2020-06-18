@@ -189,8 +189,7 @@ function mult_matrices(B, X, K, L, ish = false)
         end
         
         return M
-    end
-    
+    end    
     return [construct_monomial_mult_matrix(v) for v in Y]
 end
 

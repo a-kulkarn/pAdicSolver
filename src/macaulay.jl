@@ -262,16 +262,14 @@ function truncated_normal_form_section(N, L, L0, ish)
     #
 
     # TODO: The result of this output should be mathematically meaningful.
-    F, Nr = iwasawa_step(N, L0)
+    Nr, B = iwasawa_step(N, L0, ish)
 
     @info "" L0 typeof(L0)
 
     # TODO: This part could be organized better.
-    B = permute_and_divide_by_x0(L0, F, ish)
+    #B = permute_and_divide_by_x0(L0, F, ish)
 
     @info "" B
-
-    @info "" F.p
     
     return Nr, B # Not actually a section, but whatever.
 end
@@ -279,14 +277,59 @@ end
 ##############
 
 @doc Markdown.doc"""
-    iwasawa_step(N :: Array{T,2} where T <: Number, L0)
-    iwasawa_step(N :: Array{padic,2} , IdL0)
     iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
 
     Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
     together with  Nr = N*inv(inv(P)Q)^T.
 """
+function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
 
+    """
+    New Goal for function.
+
+    Given a matrix N and a subset of rows specified by L0, return
+
+    N' -- A change of coordinates of N in the codomain.
+    B' -- A subset of L0 specifying a stable square submatrix.
+    """
+
+    sorted_column_labels = sort(collect(values(L0)))
+    
+    F = padic_qr(transpose(N[sorted_column_labels,:]), col_pivot=Val(true))
+    Qinv  = Dory.inv_unit_lower_triangular(F.Q)
+    Fpinv = Dory.inverse_permutation(F.p)
+
+    X = transpose(Qinv[Fpinv,:])
+    #Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
+
+    
+    # Next, extract the algebra basis.
+    B = Dict()
+    m = size(F.Q,1) # The dimension of the quotient algebra.
+
+    # Extract the column to monomial correspondence.    
+    key_array = first.(sort(collect(L0), by=x->x[2]))
+
+    if ish
+        for i in 1:m
+            m = copy(key_array[F.q[i]])
+            push!(B, Dory.divexact(m, gens(parent(m))[1])=>i)
+            # should test if the diag. coeff. is not small
+        end
+    else
+        for i in 1:m
+            push!(B,  key_array[F.q[i]]=>i)
+            # should test if the diag. coeff. is not small
+        end
+    end
+ 
+    #return B
+
+    return N*X, B
+end
+
+
+## Depreciate these...
 function iwasawa_step(N :: Array{T,2} where T <: Number, L0)
     F = qr(Array(transpose(N[IdL0,:])) , Val(true))
     return F, N*F.Q
@@ -300,26 +343,6 @@ function iwasawa_step(N :: Array{padic,2} , IdL0)
 
     X = Qinv[Fpinv,:].entries    
     Farr = QRPadicArrayPivoted( (F.Q.entries)[Fpinv,:], F.R.entries, F.q)
-    
-    return Farr, N*X
-end
-
-"""
-    Given a matrix N and a subset of rows specified by L0, return
-
-    N' -- A change of coordinates of N in the codomain.
-    B  -- A subset of L0 specifying a stable square submatrix.
-"""
-function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
-
-    sorted_column_labels = sort(collect(values(L0)))
-    
-    F = padic_qr(transpose(N[sorted_column_labels,:]), col_pivot=Val(true))
-    Qinv = Dory.inv_unit_lower_triangular(F.Q)
-    Fpinv= Dory.inverse_permutation(F.p)
-
-    X = Qinv[Fpinv,:]
-    Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
     
     return Farr, N*X
 end
