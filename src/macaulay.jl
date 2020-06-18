@@ -196,7 +196,7 @@ function solve_macaulay_II(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}
     Nr, B = truncated_normal_form_section(N, L, L0, ish)
 
 
-    verbose && println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)");
+    verbose && println("-- Qr basis ",  length(B), "   ", time()-t0, "(s)");
     t0 = time()
 
     
@@ -233,9 +233,8 @@ function truncated_normal_form_map(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.Fi
     X = gens(the_ring)
     ish = !any(is_not_homogeneous, P)
 
-    t0 = time()
-
     #TODO: This breaks in some cases due to L0 not being a kbase sometimes.
+    t0 = time()
     R, L = macaulay_mat(P, X, rho, ish)
     L0 = monomials_divisible_by_x0(L, ish) 
     
@@ -274,39 +273,40 @@ function (R::FlintPadicField)(a::Singular.n_Q)
     return R(FlintQQ(a))
 end
 
-function kbase_gens_from_GB(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
+# function kbase_gens_from_GB(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
 
-    the_ring = parent(P[1])
-    @assert base_ring(the_ring) == FlintQQ
+#     the_ring = parent(P[1])
+#     @assert base_ring(the_ring) == FlintQQ
     
-    sing_R,sing_vars = Singular.PolynomialRing(Singular.QQ,
-                                               ["x$i" for i=1:nvars(the_ring)],
-                                               ordering=ordering(the_ring))
+#     sing_R,sing_vars = Singular.PolynomialRing(Singular.QQ,
+#                                                ["x$i" for i=1:nvars(the_ring)],
+#                                                ordering=ordering(the_ring))
     
-    singular_B = kbase_gens_from_GB(map(f-> rauls_change_base_ring(f, Singular.QQ, sing_R), P))
+#     singular_B = kbase_gens_from_GB(map(f-> rauls_change_base_ring(f, Singular.QQ, sing_R), P))
 
-    return map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring), singular_B)
-end
+#     return map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring), singular_B)
+# end
 
-function kbase_gens_from_GB(P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
-    I = Singular.Ideal(parent(P[1]), P)
-    I.isGB = true
-    return gens(Singular.kbase(I))
-end
+# function kbase_gens_from_GB(P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
+#     I = Singular.Ideal(parent(P[1]), P)
+#     I.isGB = true
+#     return gens(Singular.kbase(I))
+# end
 
-import Base.rem
-function rem(f::Hecke.Generic.MPolyElem{<:Hecke.FieldElem},
-             P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
-    return divrem(f,P)[2]
-end
 
-function rem(f::Singular.spoly{<:T where T},
-             P::Array{<:Singular.spoly{<:T where T},1})
+# import Base.rem
+# function rem(f::Hecke.Generic.MPolyElem{<:Hecke.FieldElem},
+#              P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
+#     return divrem(f,P)[2]
+# end
 
-    I = Singular.Ideal(parent(P[1]), P)
-    I.isGB = true
-    return Singular.reduce(f, I)
-end
+# function rem(f::Singular.spoly{<:T where T},
+#              P::Array{<:Singular.spoly{<:T where T},1})
+
+#     I = Singular.Ideal(parent(P[1]), P)
+#     I.isGB = true
+#     return Singular.reduce(f, I)
+# end
 
 
 @doc Markdown.doc"""

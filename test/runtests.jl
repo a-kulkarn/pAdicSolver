@@ -42,20 +42,10 @@ end
     R, (x1,x2) = Hecke.PolynomialRing(Qp, ["x1", "x2"])
     n = length(gens(R))
 
-    d = 10
-    M = monomials_of_degree(gens(R),0:d)
-    s = length(M)
-
-    failed_test_count = 0
-
-    # P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
-
-
     # Create the simple polynomials.
     P = [x2 - (x1^2 - 1), x2-(x1+1)]
 
     sol = padic_solutions(P, Qp)
-
     @test rel_error(P,sol) == Hecke.zero_matrix(Qp,2,2).entries
 end
 
