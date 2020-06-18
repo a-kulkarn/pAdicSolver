@@ -59,7 +59,13 @@ end
     @test rel_error(P,sol) == Hecke.zero_matrix(Qp,2,2).entries
 end
 
+@testset "Tropical solving (Singular)" begin
+    include("Seibenundzwanzig_sing.jl")
+end
 
+@testset "Tropical solving (TNF)" begin
+    include("Seibenundzwanzig.jl")
+end
 
 false && @testset "Basic solving (TNF)" begin
 
