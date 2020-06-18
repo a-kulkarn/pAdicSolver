@@ -16,7 +16,7 @@ s = length(M)
 failed_test_count = 0
 for i=1:10
     try
-        global P = hcat( [ [ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]... )*M
+        global P = hcat([[ 2*rand_padic_int(Qp)- 1 for i in 1:n] for j in 1:s]...)*M
 
         #matlist, F, B, N, Nr, RR, IdL0, IdL = solve_macaulay(P,gens(R), test_mode=true);
         sol = padic_solutions(P, Qp)
