@@ -49,15 +49,20 @@ end
     @test rel_error(P,sol) == Hecke.zero_matrix(Qp,2,2).entries
 end
 
-@testset "Tropical solving (Singular)" begin
-    include("Seibenundzwanzig_sing.jl")
+@testset "Verbose printing" begin
+    Qp = PadicField(433,3)
+
+    R, (x1,x2) = Hecke.PolynomialRing(Qp, ["x1", "x2"])
+    n = length(gens(R))
+
+    # Create the simple polynomials.
+    P = [x2 - (x1^2 - 1), x2-(x1+1)]
+
+    sol = padic_solutions(P, Qp)
+    @test rel_error(P,sol) == Hecke.zero_matrix(Qp,2,2).entries
 end
 
-@testset "Tropical solving (TNF)" begin
-    include("Seibenundzwanzig.jl")
-end
-
-false && @testset "Basic solving (TNF)" begin
+@testset "TNF solving with a condensed Macaulay matrix (missing monomials)" begin
 
     Qp = PadicField(433,3)
 
@@ -66,7 +71,7 @@ false && @testset "Basic solving (TNF)" begin
     # Create the simple polynomials.
     P = [x2 - (x1^2 - 1), x2]
 
-    sol_mat = matrix(Qp, [[-1,1,1], [0,0,-1]])
+    sol_mat = matrix(Qp, [[-1,1], [0,0]])
     low_prec_sol_mat = (x->setprecision(x,2)).(sol_mat)
     
     true_sol_set = row_set(sol_mat)
@@ -79,12 +84,15 @@ false && @testset "Basic solving (TNF)" begin
     @test true_sol_set == row_set(padic_solutions(P, Qp, eigenvector_method="power"))
     @test sol_set_low_prec == row_set(padic_solutions(P, Qp, eigenvector_method="inverse"))
     # @test true_sol_set == row_set(padic_solutions(I, Qp, eigenvector_method="classical"))
-
-
 end
 
 
-#include("basic_plane_test.jl")
-#include("Seibenundzwanzig.jl")
+@testset "Tropical solving (Singular)" begin
+    include("Seibenundzwanzig_sing.jl")
+end
+
+@testset "Tropical solving (TNF)" begin
+    include("Seibenundzwanzig.jl")
+end
 
 nothing

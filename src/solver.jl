@@ -21,7 +21,7 @@ Returns the affine solutions to the polynomial equations defined by I.
 The system must be 0 dimensional.
 """
 function padic_solutions(I::Singular.sideal{<:Singular.spoly{<:T}} where T, R;
-                         eigenvector_method="power")
+                         eigenvector_method="power", verbose=true)
 
     # Presently, the user is responsible for providing the padic ring R.
     #
@@ -55,8 +55,8 @@ function padic_solutions(I::Singular.sideal{<:Singular.spoly{<:T}} where T, R;
 end
 
 function padic_solutions(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}, R;
-                         eigenvector_method="power")
+                         eigenvector_method="power", verbose = true)
     
     @assert base_ring(parent(P[1])) == R
-    return solve_macaulay_II(P, eigenvector_method=eigenvector_method)
+    return solve_macaulay_II(P, eigenvector_method=eigenvector_method, verbose=verbose)
 end
