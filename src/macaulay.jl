@@ -52,8 +52,8 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     @time for p in P
         for m in mult_monomials[total_degree(p)]
 
-            srow = sparse_row( R, [monomial_dict[mon] for mon in monomials(m*p)],
-                                collect(coeffs(p)) )
+            srow = sparse_row(R, [monomial_dict[mon] for mon in monomials(m*p)],
+                                collect(coeffs(p)))
             push!(macaulay_matrix, srow)
         end
     end
@@ -173,8 +173,9 @@ function solve_macaulay_II(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}
                            verbose::Bool = false,
                            test_mode :: Bool = false )
 
+    # Start the clock.
+    t0 = time()
 
-    
     # This solve function could be made to work with polynomials with FlintRR coefficients
     # as well, though this requires managing the type dispatch a bit and remodeling the
     # old DynamicPolynomials based subfunctions.
@@ -203,7 +204,6 @@ function solve_macaulay_II(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}
     verbose && println("-- Mult matrices ",time()-t0, "(s)");
     t0 = time()
 
-
     if test_mode
         println("TESTING MODE: Computation incomplete. Returning partial result.")
         return M, F, B, N, Nr, R, IdL0, Idx
@@ -219,7 +219,6 @@ function solve_macaulay_II(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}
     # not correspond to a coordinate.
     if ish return Xi else return  Xi[:,2:size(Xi,2)] end
 
-    
 end
     
 ##############
@@ -229,21 +228,77 @@ function truncated_normal_form_map(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.Fi
                                    verbose=false)
 
     the_ring = parent(P[1])
+    K = base_ring(the_ring)
+    
     X = gens(the_ring)
     ish = !any(is_not_homogeneous, P)
 
-    #TODO: This breaks in some cases due to L0 not being a kbase sometimes.
     t0 = time()
     R, L = macaulay_mat(P, X, rho, ish)
-    L0 = monomials_divisible_by_x0(L, ish) 
     
-    verbose && println("-- Macaulay matrix ", size(R,1), "x", size(R,2), "   ", time()-t0, "(s)");
+    verbose && println("-- Macaulay matrix $(size(R,1)) x $(size(R,2))   $(time()-t0) (s)");
     t0 = time()
     
-    @time N = nullspace(R)[2]
+    if verbose
+        @time N = nullspace(R)[2]
+    else
+        N = nullspace(R)[2]
+    end
 
+    # Detect if there are missing monomials, and update N accordingly.
+    # (Missing monomials automatically lie in the kernel).
+    missing_monomials = let
+        if ish
+            np1 = length(X)
+        else
+            np1 = length(X)+1
+        end
+        !(length(L) == binomial(rho + np1 - 1, rho))
+    end
+
+    
+    if missing_monomials
+        V = ish ? monomials_of_degree(X, rho) : monomials_of_degree(X, 0:rho)
+
+        missing_count = 0
+        missing_mons = Array{typeof(X[1]), 1}()
+        for m in V
+            if !(m in keys(L))
+                push!(missing_mons, m)
+                missing_count += 1
+            end
+        end
+
+        # Update indices in L
+        for m in keys(L)
+            L[m] += missing_count
+        end
+
+        # Add the new labels
+        for i=1:length(missing_mons)
+            L[missing_mons[i]] = i
+        end
+        
+        # TODO: When AbstractAlgebra finally implements diagonal joining, use that.
+        #
+        # Update matrices via a diagonal join.
+        newN = zero_matrix(K, missing_count + size(N,1), missing_count + size(N,2))
+        for i=1:missing_count
+            newN[i,i] = K(1)
+        end
+        for i=1:size(N,1)
+            for j=1:size(N,2)
+                newN[i+missing_count, j+missing_count] = N[i,j]
+            end
+        end        
+        N = newN
+    end
+
+    # The monomials for the set such that [xi]B \in V.
+    L0 = monomials_divisible_by_x0(L, ish) 
+    
     verbose && println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
-    verbose && println("-- Null space ", size(N,1), "x", size(N,2), "   ", time()-t0, "(s)");
+    verbose && println("-- Null space $(size(N,1)) x $(size(N,2))   $(time()-t0) (s)");
     t0 = time()
 
     return N, L, L0
@@ -268,13 +323,6 @@ function truncated_normal_form_section(N, L, L0, ish)
         B = Dict(Dory.divexact(m, gens(parent(m))[1])=>i for (m,i) in B)
     end
  
-
-    @info "" L0 typeof(L0)
-    @info "" B
-    
-    # TODO: This part could be organized better.
-    #B = permute_and_divide_by_x0(L0, F, ish)
-
     return Nr, B # Not actually a section, but whatever.
 end
 
@@ -283,7 +331,7 @@ end
 @doc Markdown.doc"""
     iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
 
-    Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
+    Return the QR-factorization object (For PN_0P' = QR, return <inv(P)Q, R, P'>)
     together with  Nr = N*inv(inv(P)Q)^T.
 """
 function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
@@ -303,8 +351,7 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
     Qinv  = Dory.inv_unit_lower_triangular(F.Q)
     Fpinv = Dory.inverse_permutation(F.p)
 
-    X = transpose(Qinv[Fpinv,:])
-
+    # X = transpose(Qinv[Fpinv,:])
     X = transpose(Qinv)[Fpinv,:]
     
     #Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
@@ -324,11 +371,9 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
 
     Nr = N*X
 
-    test_rows = sorted_column_labels[F.q[1:m]]
-
-    @info "" test_rows
-    
-    @info "" valuation.(Nr[test_rows, :].entries)
+    #test_rows = sorted_column_labels[F.q[1:m]]
+    #@info "" test_rows
+    #@info "" valuation.(Array(Nr[test_rows, :]))
     
     return N*X, B
 end
