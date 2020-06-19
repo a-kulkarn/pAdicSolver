@@ -1,3 +1,5 @@
+using Hecke
+using pAdicSolver
 using Singular
 
 function random_linear_equations(R::Singular.PolyRing)
@@ -19,8 +21,8 @@ R, Rvars =
 
 include(".lgr_eqns.jl")
 
-
-sid   = Singular.Ideal(R, [eval(Meta.parse("$p")) for p in ps])
+sid = Singular.Ideal(R, ps)
+#sid   = Singular.Ideal(R, [eval(Meta.parse("$p")) for p in ps])
 sidl  = Singular.Ideal(R, [random_linear_equations(R) for i = 1:11])
 sidl2 = Singular.Ideal(R, [ Rvars[j] - R(rand(-1000:1000)) for j=vcat(26:28, 30, 34:40) ])
 
@@ -31,16 +33,12 @@ sidl2 = Singular.Ideal(R, [ Rvars[j] - R(rand(-1000:1000)) for j=vcat(26:28, 30,
 B = Singular.kbase(G)
 
 
-# Convert to the right type.
-using Hecke
-using pAdicSolver
-
 #P = map(f->rauls_change_base_ring(f,FlintQQ, Hecke.PolynomialRing(FlintQQ, 40, ordering=:degrevlex)[1]), gens(G))
 
 #P = gens(G)
 
 #sol = solve_macaulay(P, groebner=true, eigenvector_method="tropical")
 
-sol = padic_solutions(G, PadicField(23,100))
+sol = padic_solutions(G, PadicField(11,10))
 
 nothing
