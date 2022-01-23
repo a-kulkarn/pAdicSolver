@@ -22,11 +22,3 @@ sol = solve_macaulay(P, rho=5, groebner=false, eigenvector_method="tropical")
 # println("\n-- sol ")
 # println(sol,"\n")
 
-try
-    Er = rel_error(P,sol)
-    println("-- Rel error: ")
-    display(Er)
-    println()
-catch e
-end
-
