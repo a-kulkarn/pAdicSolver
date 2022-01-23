@@ -1,5 +1,4 @@
 export macaulay_mat, solve_macaulay
-
 using LinearAlgebra
 
 function is_not_homogeneous(p)
@@ -8,6 +7,13 @@ function is_not_homogeneous(p)
 end
 
 export macaulay_mat
+
+
+###############################################################
+#
+# Creation of Linear algebra structures.
+#
+###############################################################
 
 ## Present issues.
 # Performance is not good, and garbage collector runs way too much.
@@ -110,10 +116,10 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
     X = gens(the_ring)
     
     println()
-    println("-- Degrees ", map(p->total_degree(p),P))
+    @vprint :padic_solver 2 "-- Degrees $(map(p->total_degree(p),P)))"
     
     ish = !any(is_not_homogeneous, P)
-    println("-- Homogeneity ", ish)
+    @vprint :padic_solver 2 "-- Homogeneity $(ish)"
 
     t0 = time()
 
@@ -144,14 +150,16 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
         R, L = macaulay_mat(P, X, rho, ish)           
     
         L0 = monomials_divisible_by_x0(L, ish)
-    
-        println("-- Macaulay matrix ", size(R,1),"x",size(R,2),  "   ",
-                time()-t0, "(s)"); t0 = time()
+
+        msg = "-- Macaulay matrix $size(R,1) x $size(R,2) $(time()-t0) (s)"
+        @vprint :padic_solver msg
+        t0 = time()
         
-        @time N = nullspace(R)[2]
+        @vtime :padic_solver N = nullspace(R)[2]
   
-        println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
-        println("-- Null space ",size(N,1),"x",size(N,2), "   ",time()-t0, "(s)"); t0 = time()
+        @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
+        msg = string("-- Null space ", size(N,1), " x ", size(N,2), "   ", time()-t0, " (s)"); t0 = time()
+        @vprint :padic_solver msg
 
         # The idea of the QR step is two-fold:
         # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
@@ -165,11 +173,11 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
         F, Nr = iwasawa_step(N, L0)
         B = permute_and_divide_by_x0(L0, F, ish)
 
-        println("-- Qr basis ",  length(B), "   ",time()-t0, "(s)"); t0 = time()
+        @vprint :padic_solver sprint(show, "-- Qr basis ",  length(B), "   ", time()-t0, "(s)")
+        t0 = time()
 
-        
-        M = mult_matrices(B, X, Nr, L, ish)
-        println("-- Mult matrices ",time()-t0, "(s)"); t0 = time()
+        @vtime :padic_solver M = mult_matrices(B, X, Nr, L, ish)
+        t0 = time()
     end
 
     if test_mode
@@ -177,9 +185,9 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
         return M, F, B, N, Nr, R, IdL0, Idx
     end
 
-    Xi = normalized_simultaneous_eigenvalues(M, ish, eigenvector_method)
-    println("-- Eigen diag",  "   ",time()-t0, "(s)"); t0 = time()
-
+    @vtime :padic_solver Xi = normalized_simultaneous_eigenvalues(M, ish, eigenvector_method)
+    t0 = time()
+    
     # In the affine system, the distinguished monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
     if ish return Xi else return  Xi[:,2:size(Xi,2)] end
@@ -236,7 +244,7 @@ end
 """
 
 function iwasawa_step(N :: Array{T,2} where T <: Number, L0)
-    F = qr( Array(transpose(N[IdL0,:])) , Val(true))
+    F = qr(Array(transpose(N[IdL0,:])) , Val(true))
     return F, N*F.Q
 end
 

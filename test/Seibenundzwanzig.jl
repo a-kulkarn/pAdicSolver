@@ -2,13 +2,6 @@
 
 @testset "Tropical solver tests" begin
 
-    # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
-    Qp = PadicField(89,30)
-
-
-    R, (p12, p13, p14, p23, p24) = PolynomialRing(Qp, ["p12", "p13", "p14", "p23", "p24"])
-    n = length(gens(R))
-
     include(".cubic_surface_eqns.jl")
 
     sol = solve_macaulay(P, rho=5, groebner=false, eigenvector_method="tropical")

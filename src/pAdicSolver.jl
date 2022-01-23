@@ -22,5 +22,15 @@ module pAdicSolver
   #include("newton.jl")
   #include("toric.jl")
 
+###############################################################
+#
+# Init.
+#
+###############################################################
+
+function __init__()
+    # Attach the necessary verbose scopes to Hecke's global dicitionary.
+    Hecke.add_verbose_scope(:padic_solver)
+end
 
 end

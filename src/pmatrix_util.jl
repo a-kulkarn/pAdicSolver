@@ -38,14 +38,14 @@ function normalized_simultaneous_eigenvalues(
     Qp = base_ring(M[1])
     Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
-    println("Valuations of singular values: ")
-    println(valuation.(singular_values(M[1])))
+    @vprint :padic_solver 2 "Valuations of singular values:"
+    @vprint :padic_solver 2 valuation.(singular_values(M[1]))
 
     # We will assume that M[1] is well-conditioned. for now.
     
     # The rectangular solve step is enough to kill off any helpful data mod p.
-    @time I0 = rectangular_solve(M[1],identity_matrix(Mrand.base_ring,size(M[1],1)))
-    @time Mg = I0*Mrand
+    @vtime :padic_solver 2 I0 = rectangular_solve(M[1],identity_matrix(Mrand.base_ring,size(M[1],1)))
+    @vtime :padic_solver 2 Mg = I0*Mrand
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     eigen_subspaces  = eigspaces(Mg, method=method)
@@ -116,8 +116,8 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     # We will assume that M[1] is well-conditioned. for now.
     
     # The rectangular solve step is enough to kill off any helpful data mod p.
-    @time I0 = inv(M[1])
-    @time Mg = I0*M[2]
+    @vtime :padic_solver 2 I0 = inv(M[1])
+    @vtime :padic_solver 2 Mg = I0*M[2]
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     X, V = Dory.block_schur_form(Mg)
