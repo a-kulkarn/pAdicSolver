@@ -34,7 +34,7 @@ function normalized_simultaneous_eigenvalues(
         return nse_schur(inputM, ish, method)
     end
     
-    M = [ matrix(A) for A in inputM]
+    M = [matrix(A) for A in inputM]
     Qp = base_ring(M[1])
     Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
@@ -106,7 +106,7 @@ Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 
 function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
     
-    M = [ matrix(A) for A in inputM]
+    M = [matrix(A) for A in inputM]
     Qp = base_ring(M[1])
     Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 

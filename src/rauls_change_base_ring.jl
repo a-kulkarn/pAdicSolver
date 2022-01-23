@@ -13,11 +13,11 @@ function (R::Singular.Rationals)(a::Hecke.fmpq)
     return R( num // den)
 end
 
-function (R::Hecke.FlintRationalField)(a::Singular.n_Q)
-    n = convert(BigInt, numerator(a))
-    d = convert(BigInt, denominator(a))
-    return R(n//d)
-end
+# function (R::Hecke.FlintRationalField)(a::Singular.n_Q)
+#     n = convert(BigInt, numerator(a))
+#     d = convert(BigInt, denominator(a))
+#     return R(n//d)
+# end
 
 function (R::Hecke.FlintRationalField)(a::Singular.n_Z)
     n = convert(BigInt, a)
