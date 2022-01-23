@@ -21,7 +21,7 @@ println("-- Homogeneity ", ish)
 t0 = time()
 R, L = macaulay_mat(P, X, rho, ish)
 
-println( valuation.(singular_values(matrix(R))) )
+println(valuation.(singular_values(matrix(R))))
 
 # R = matrix(R)
 

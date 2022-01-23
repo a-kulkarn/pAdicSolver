@@ -12,7 +12,7 @@ n = length(gens(R))
 num_samp = 10
 
 failed_test_count = 0
-for d in [2,4,6,10, 15]
+for d in [2,4,6,10,15]
 
     tot_time  = 0
     tot_error = 0

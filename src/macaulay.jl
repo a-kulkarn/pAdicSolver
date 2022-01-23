@@ -52,8 +52,8 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     @time for p in P
         for m in mult_monomials[total_degree(p)]
 
-            srow = sparse_row( R, [monomial_dict[mon] for mon in monomials(m*p)],
-                                collect(coeffs(p)) )
+            srow = sparse_row(R, [monomial_dict[mon] for mon in monomials(m*p)],
+                              collect(coefficients(p)))
             push!(macaulay_matrix, srow)
         end
     end

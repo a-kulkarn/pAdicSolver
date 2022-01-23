@@ -26,7 +26,7 @@ end
 lines = [random_linear() for j=1:4]
 Pnew = vcat(P,lines)
 
-#sol = solve_macaulay(P,gens(R))
+sol = solve_macaulay(Pnew)
 
 #sol = solve_macaulay(Pnew,gens(R), rho=3)
 
