@@ -9,11 +9,11 @@ end
 export macaulay_mat
 
 
-###############################################################
+######################################################################################################
 #
 # Creation of Linear algebra structures.
 #
-###############################################################
+######################################################################################################
 
 ## Present issues.
 # Performance is not good, and garbage collector runs way too much.
@@ -67,15 +67,18 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     return macaulay_matrix, monomial_dict
 end
 
-## ***************************************************************************************    
-# Main solver function
 
-    # calls to:
-    # macaulay_mat
-    # iwasawa_step
-    # mult_matrix
-    # eigdiag
-## ***************************************************************************************
+######################################################################################################
+# Main solver functionality
+#
+#    calls to:
+#    # macaulay_mat
+#    # iwasawa_step
+#    # mult_matrix
+#    # eigdiag
+#
+######################################################################################################
+
 
 @doc Markdown.doc"""
     solve_macaulay(P :: Vector{Hecke.Generic.MPolyElem{T}} where T <: Hecke.RingElem;
@@ -100,8 +103,6 @@ INPUTS:
 - eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
 
 """
-# Should have a verbose parameter.
-
 function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}  ;
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
                         groebner :: Bool = false,
@@ -141,7 +142,7 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
         M = [m.entries for m in M]
 
         ## The prime will be specified by the user..
-        ## The precsion should also be specified, or the user should request
+        ## The precision should also be specified, or the user should request
         ## some feature to be invoked.
 
         # Question: How to decide the right precision for the user at this stage???        
@@ -193,7 +194,7 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
     if ish return Xi else return  Xi[:,2:size(Xi,2)] end
 end
 
-##############
+######################################################################################################
 
 function (R::FlintPadicField)(a::Singular.n_Q)
     return R(FlintQQ(a))
