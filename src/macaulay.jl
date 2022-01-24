@@ -69,19 +69,88 @@ end
 
 
 ######################################################################################################
-# Main solver functionality
 #
-#    calls to:
-#    # macaulay_mat
-#    # iwasawa_step
-#    # mult_matrix
-#    # eigdiag
+#  Solver (Interface)
 #
 ######################################################################################################
 
-# TODO: Define the following for the user interface.
-# solve_affine_system
-# solve_projective_system
+@doc Markdown.doc"""
+    solve_affine_groebner_system(P :: Vector{Hecke.Generic.MPolyElem{T}} where T <: Hecke.RingElem;
+                   rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                   eigenvector_method  :: String ="power",
+                   test_mode  :: Bool =false )
+
+Given a system of polynomials `P` that is a Groebner basis, with leading monomials `LP`, return
+the solutions to the polynomial system `P`.
+"""
+
+function solve_affine_system(P; kwds...)
+    _solve_system_method_dispatch(P, false; kwds...)
+end
+
+function solve_projective_system(P; kwds...)
+    @assert !any(is_not_homogeneous, P)
+    _solve_system_method_dispatch(P, true; kwds...)
+end
+
+
+function _solve_system_method_dispatch(P, is_homogeneous; method = :truncated_normal_form, kwds...)
+
+    if method in [:truncated_normal_form, :tnf, :macaulay]
+        return _solver_engine(P, is_homogeneous; method = :tnf, kwds...)
+        
+    elseif method == :groebner
+        # 1. Compute the groebner basis over the exact field.
+        I = ideal(parent(P[1]), P)
+        gb = Oscar.groebner_basis(I)
+
+        # Fetch the leading monomials somehow.
+        @error "method == :groebner is not implemented."
+        LP = "TODO"
+        
+        # 2. Call the Solver Engine with the groebner basis and leading monomials.
+        return _solver_engine(P, is_homogeneous, LP)        
+    elseif method isa String
+        @error "Method must be of type Symbol."
+    else
+        @error "Specified method is not implemented"
+    end
+end
+
+@doc Markdown.doc"""
+    solve_affine_groebner_system(P :: Vector{Hecke.Generic.MPolyElem{T}} where T <: Hecke.RingElem;
+                   rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                   eigenvector_method  :: String ="power",
+                   test_mode  :: Bool =false )
+
+Given a system of polynomials `P` that is a Groebner basis, with leading monomials `LP`, return
+the solutions to the polynomial system `P`.
+"""
+function solve_affine_groebner_system(P, LP)
+    return _solver_engine(P, false, LP)
+end
+
+function solve_projective_groebner_system(P, LP)
+    return _solver_engine(P, true, LP)
+end
+
+
+@doc Markdown.doc"""
+    solve_system(P :: Vector{Hecke.Generic.MPolyElem{T}} where T <: Hecke.RingElem;
+                   rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                   eigenvector_method  :: String ="power",
+                   test_mode  :: Bool =false )
+
+Alias for `solve_affine_system`.
+"""
+solve_system = solve_affine_system
+
+
+######################################################################################################
+#
+#  Legacy code
+#
+######################################################################################################
 
 @doc Markdown.doc"""
     solve_macaulay(P :: Vector{Hecke.Generic.MPolyElem{T}} where T <: Hecke.RingElem;
@@ -106,10 +175,89 @@ INPUTS:
 - eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
 
 """
-function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}  ;
+function solve_macaulay(P; kwds...)
+    ish = !any(is_not_homogeneous, P)
+    @vprint :padic_solver 2 "-- Homogeneity $(ish)"
+    if !ish return solve_affine_system(P; kwds...) else return solve_projective_system(P; kwds...) end
+end
+
+
+######################################################################################################
+#
+#    Main solver functionality
+#
+#    calls to:
+#        # macaulay_mat
+#        # iwasawa_step
+#        # mult_matrix
+#        # eigdiag
+#
+######################################################################################################
+
+
+function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = "power", kwds...)
+    
+    # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
+    #       where B is some change of basis matrix.
+    #
+    # Dispatch on the method argument.
+    M = _multiplication_matrices(Val(method), P, is_homogeneous; kwds...)
+
+    # Apply the Eigenvector method.
+    @vtime :padic_solver Xi = normalized_simultaneous_eigenvalues(M, is_homogeneous, eigenvector_method)
+    
+    # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
+    # not correspond to a coordinate.
+    
+    if is_homogeneous return Xi else return Xi[:,2:size(Xi,2)] end
+    
+end
+
+function _solver_engine(P, is_homogeneous, leading_mons_of_P; eigenvector_method = "power", kwds...)
+    
+    # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
+    #       where B is some change of basis matrix.
+    #
+    # Dispatch on the method argument.
+    M = _multiplication_matrices(Val(:given_GB), P, is_homogeneous, leading_mons_of_P; kwds...)
+
+    # Apply the Eigenvector method.
+    @vtime :padic_solver Xi = normalized_simultaneous_eigenvalues(M, is_homogeneous, eigenvector_method)
+    
+    # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
+    # not correspond to a coordinate.
+    
+    if is_homogeneous return Xi else return Xi[:,2:size(Xi,2)] end
+    
+end
+
+
+@doc Markdown.doc"""
+    _multiplication_matrices_by_truncated_normal_form(P :: Vector{Hecke.Generic.MPolyElem{T}} where T <: Hecke.RingElem;
+                   rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+                   eigenvector_method  :: String ="power",
+                   test_mode  :: Bool =false )
+
+Solve a 0-dimensional system of polynomial equations. (Presently, only over Qp.) More precisely,
+compute the values of x in Qp^n such that 
+
+    all([iszero(p(x)) for p in P]) == true
+
+The options specify strategy parameters.
+
+#-------------------
+
+INPUTS:
+- P        -- polynomial system, a Vector of AbstractAlgebra polynomials.
+- rho      -- monomial degree of the system. Default is the macaulay degree.
+- isgroebner_with_order --  indicating if the list of polynomials is already a groebner basis 
+                            w.r.t the specified ordering. Must be `false`, or a Symbol specifing 
+                            a monomial ordering.
+- eigenvector_method -- Strategy to solve for eigenvectors. Default is power iteration.
+
+"""
+function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous;
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
-                        groebner :: Bool = false,
-                        eigenvector_method :: String = "power",
                         test_mode :: Bool = false )
 
     # This solve function could be made to work with polynomials with FlintRR coefficients
@@ -119,84 +267,79 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
     the_ring = parent(P[1])
     X = gens(the_ring)
     
-    println()
-    @vprint :padic_solver 2 "-- Degrees $(map(p->total_degree(p),P)))"
+    @vprint :padic_solver 2 "\n-- Degrees $(map(p->total_degree(p),P)))"
     
-    ish = !any(is_not_homogeneous, P)
-    @vprint :padic_solver 2 "-- Homogeneity $(ish)"
+    t0 = time()
+    R, L = macaulay_mat(P, X, rho, is_homogeneous)
+    L0 = monomials_divisible_by_x0(L, is_homogeneous)
 
+    msg = "-- Macaulay matrix $size(R,1) x $size(R,2) $(time()-t0) (s)"
+    @vprint :padic_solver msg
+    t0 = time()
+    
+    @vtime :padic_solver N = nullspace(R)[2]
+    
+    @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
+    msg = string("-- Null space ", size(N,1), " x ", size(N,2), "   ", time()-t0, " (s)"); t0 = time()
+    @vprint :padic_solver msg
+
+    # The idea of the QR step is two-fold:
+    # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
+    #    set (here, IdL0).
+    #    This is accomplis_homogeneoused by pivoting. The columns corresponding to F.p[1:size(N,2)] form
+    #    a well-conditioned submatrix.
+    #
+    # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
+    #    coordinates is not important in the final step, when the eigenvalues are calulated.
+    #
+    F, Nr = iwasawa_step(N, L0)
+    B = permute_and_divide_by_x0(L0, F, is_homogeneous)
+
+    @vprint :padic_solver sprint(show, "-- Qr basis ",  length(B), "   ", time()-t0, "(s)")
     t0 = time()
 
-    if groebner                
-        ## Construct the multiplication matrices directly.
-        B = kbase_gens_from_GB(P)
-
-        xi_operators = []
-        for v in vcat([the_ring(1)], X)
-            push!(xi_operators, [rem(v*b, P) for b in B])
-        end
-
-        # TODO: The user should specify the prime.
-        Qp = PadicField(23,30)
-        
-        M = [matrix(Qp, [[coeff(g, b) for b in B] for g in op]) for op in xi_operators]
-        M = [m.entries for m in M]
-
-        ## The prime will be specified by the user..
-        ## The precision should also be specified, or the user should request
-        ## some feature to be invoked.
-
-        # Question: How to decide the right precision for the user at this stage???        
-
-    else
-        R, L = macaulay_mat(P, X, rho, ish)           
-    
-        L0 = monomials_divisible_by_x0(L, ish)
-
-        msg = "-- Macaulay matrix $size(R,1) x $size(R,2) $(time()-t0) (s)"
-        @vprint :padic_solver msg
-        t0 = time()
-        
-        @vtime :padic_solver N = nullspace(R)[2]
-  
-        @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
-        msg = string("-- Null space ", size(N,1), " x ", size(N,2), "   ", time()-t0, " (s)"); t0 = time()
-        @vprint :padic_solver msg
-
-        # The idea of the QR step is two-fold:
-        # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
-        #    set (here, IdL0).
-        #    This is accomplished by pivoting. The columns corresponding to F.p[1:size(N,2)] form
-        #    a well-conditioned submatrix.
-        #
-        # 2: Present the algebra in Q-coordinates, which has many zeroes. Note that the choice of
-        #    coordinates is not important in the final step, when the eigenvalues are calulated.
-        #
-        F, Nr = iwasawa_step(N, L0)
-        B = permute_and_divide_by_x0(L0, F, ish)
-
-        @vprint :padic_solver sprint(show, "-- Qr basis ",  length(B), "   ", time()-t0, "(s)")
-        t0 = time()
-
-        @vtime :padic_solver M = mult_matrices(B, X, Nr, L, ish)
-        t0 = time()
-    end
+    @vtime :padic_solver M = mult_matrices(B, X, Nr, L, is_homogeneous)
+    t0 = time()
 
     if test_mode
         println("TESTING MODE: Computation incomplete. Returning partial result.")
         return M, F, B, N, Nr, R, IdL0, Idx
     end
 
-    @vtime :padic_solver Xi = normalized_simultaneous_eigenvalues(M, ish, eigenvector_method)
-    t0 = time()
-    
-    # In the affine system, the distinguished monomial (i.e, "1" for that case) does 
-    # not correspond to a coordinate.
-    if ish return Xi else return  Xi[:,2:size(Xi,2)] end
+    return M
 end
 
+
+function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous, LP)
+
+    ## Construct the multiplication matrices directly.
+    B = kbase_gens_from_GB(P, LP)
+
+    xi_operators = []
+    for v in vcat([the_ring(1)], X)
+        push!(xi_operators, [rem(v*b, P) for b in B])
+    end
+
+    # TODO: The user should specify the prime.
+    Qp = PadicField(23,30)
+    
+    M = [matrix(Qp, [[coeff(g, b) for b in B] for g in op]) for op in xi_operators]
+    M = [m.entries for m in M]
+
+    ## The prime will be specified by the user..
+    ## The precision should also be specified, or the user should request
+    ## some feature to be invoked.
+
+    
+    # In the affine system, the distinguis_homogeneoused monomial (i.e, "1" for that case) does 
+    # not correspond to a coordinate.
+    if is_homogeneous return Xi else return Xi[:,2:size(Xi,2)] end    
+end
+
+
 ######################################################################################################
-# 
+#
+#  Singular Dependency:
 #  Functions for picking monomials given a Groebner basis.
 #
 ######################################################################################################
@@ -237,6 +380,38 @@ function rem(f::Singular.spoly{<:Hecke.FieldElem},
     I = Singular.Ideal(parent(P[1]), P)
     I.isGB = true
     return Singular.reduce(f, I)
+end
+
+######################################################################################################
+# 
+#  Oscar Dependency
+#
+######################################################################################################
+
+@doc Markdown.doc"""
+    Given a list of polynomials `P`, which is a Groebner basis for some ideal,
+    as well as the list of leading monomials LP, construct the generators for the quotient
+    ring `K[x]/P` as a K-vector space 
+"""
+function kbase_from_GB(P, LP)
+
+    isempty(P) && @error "Input list of polynomials must not be empty."
+    
+    R = parent(P[1])
+
+    for m in monomials_of_degree
+        
+    end
+        
+    @error "Not implemented."
+end
+    
+function kbase_from_GB(I)
+    Oscar.singular_assure(I)
+    sI = I.gens.S
+    sI.isGB = true
+
+    return sing_kbase = Oscar.Singular.kbase(sI)
 end
 
 
