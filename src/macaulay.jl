@@ -41,7 +41,7 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
             mult_monomials[d] = monomials_of_degree(X, 0:rho-d)
         end
     end
-    @time for p in P
+    for p in P
         for m in mult_monomials[total_degree(p)]
             push!(monomial_set, monomials(m*p)...)
         end
@@ -55,7 +55,7 @@ function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
     # Create sparse rows for each m*p, with m a mulitplier monomial and p a polynomial.
     R = base_ring(parent(P[1]))    
     macaulay_matrix = sparse_matrix(R)
-    @time for p in P
+    for p in P
         for m in mult_monomials[total_degree(p)]
 
             srow = sparse_row(R, [monomial_dict[mon] for mon in monomials(m*p)],
@@ -79,6 +79,9 @@ end
 #
 ######################################################################################################
 
+# TODO: Define the following for the user interface.
+# solve_affine_system
+# solve_projective_system
 
 @doc Markdown.doc"""
     solve_macaulay(P :: Vector{Hecke.Generic.MPolyElem{T}} where T <: Hecke.RingElem;
@@ -89,7 +92,7 @@ end
 Solve a 0-dimensional system of polynomial equations. (Presently, only over Qp.) More precisely,
 compute the values of x in Qp^n such that 
 
-    all([ iszero(p(x)) for p in P ]) == true
+    all([iszero(p(x)) for p in P]) == true
 
 The options specify strategy parameters.
 
@@ -130,15 +133,13 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
 
         xi_operators = []
         for v in vcat([the_ring(1)], X)
-            push!(xi_operators, [rem(v*b, P) for b in B] )
+            push!(xi_operators, [rem(v*b, P) for b in B])
         end
 
         # TODO: The user should specify the prime.
         Qp = PadicField(23,30)
         
-        M = [matrix(Qp,  [ [coeff(g, b) for b in B] for g in op])
-             for op in xi_operators ]        
-        
+        M = [matrix(Qp, [[coeff(g, b) for b in B] for g in op]) for op in xi_operators]
         M = [m.entries for m in M]
 
         ## The prime will be specified by the user..
@@ -195,6 +196,10 @@ function solve_macaulay(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1}
 end
 
 ######################################################################################################
+# 
+#  Functions for picking monomials given a Groebner basis.
+#
+######################################################################################################
 
 function (R::FlintPadicField)(a::Singular.n_Q)
     return R(FlintQQ(a))
@@ -205,13 +210,13 @@ function kbase_gens_from_GB(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem
     the_ring = parent(P[1])
     @assert base_ring(the_ring) == FlintQQ
     
-    sing_R,sing_vars = Singular.PolynomialRing(Singular.QQ,
-                                               ["x$i" for i=1:nvars(the_ring)],
-                                               ordering=ordering(the_ring))
+    sing_R, sing_vars = Singular.PolynomialRing(Singular.QQ,
+                                                ["x$i" for i=1:nvars(the_ring)],
+                                                ordering=ordering(the_ring))
     
-    singular_B = kbase_gens_from_GB(map(f-> rauls_change_base_ring(f, Singular.QQ, sing_R), P))
+    singular_B = kbase_gens_from_GB(map(f-> change_base_ring(f, Singular.QQ, sing_R), P))
 
-    return map(f-> rauls_change_base_ring(f, Hecke.FlintQQ, the_ring), singular_B)
+    return map(f-> change_base_ring(f, Hecke.FlintQQ, the_ring), singular_B)
 end
 
 function kbase_gens_from_GB(P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
@@ -234,6 +239,12 @@ function rem(f::Singular.spoly{<:Hecke.FieldElem},
     return Singular.reduce(f, I)
 end
 
+
+######################################################################################################
+# 
+#  Computing a numerically stable basis to compute the multiplication-by-xi operators.
+#
+######################################################################################################
 
 @doc Markdown.doc"""
     iwasawa_step(N :: Array{T,2} where T <: Number, L0)
@@ -260,7 +271,6 @@ function iwasawa_step(N :: Array{padic,2} , IdL0)
     
     return Farr, N*X
 end
-
 
 function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
 

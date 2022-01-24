@@ -110,8 +110,8 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     Qp = base_ring(M[1])
     Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
-    println("Valuations of singular values: ")
-    println(valuation.(singular_values(M[1])))
+    @vprint :padic_solver 2 "Valuations of singular values: "
+    @vprint :padic_solver 2 valuation.(singular_values(M[1]))
 
     # We will assume that M[1] is well-conditioned. for now.
     

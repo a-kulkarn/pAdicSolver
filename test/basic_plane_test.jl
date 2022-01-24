@@ -19,14 +19,7 @@ using Dory
     P = hcat([[2*rand_padic_int(Qp) - 1 for i in 1:n] for j in 1:s]...)*M
 
     sol = solve_macaulay(P)
-
-    println("\n-- sol ")
-    println(sol,"\n")
-
     Er = rel_error(P,sol)
-    println("-- Rel error: ")
-    display(Er)
-    println()
     @test iszero(Er)
 end
 

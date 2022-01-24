@@ -11,7 +11,6 @@ module pAdicSolver
   # TODO: check if Singular is installed.
   if true
       import Singular
-      include("rauls_change_base_ring.jl") # TODO: Temporary
   end
 
   include("mindex.jl")
