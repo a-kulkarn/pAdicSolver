@@ -550,6 +550,53 @@ end
 #
 ######################################################################################################
 
+        @doc Markdown.doc"""
+    iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
+    Return the QR-factorization object (For PN_0P' = QR, return <inv(P)Q, R, P'>)
+    together with  Nr = N*inv(inv(P)Q)^T.
+"""
+function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
+
+    """
+    New Goal for function.
+    Given a matrix N and a subset of rows specified by L0, return
+    N' -- A change of coordinates of N in the codomain.
+    B' -- A subset of L0 specifying a stable square submatrix.
+    """
+
+    sorted_column_labels = sort(collect(values(L0)))
+    
+    F = padic_qr(transpose(N[sorted_column_labels,:]), col_pivot=Val(true))
+    Qinv  = Dory.inv_unit_lower_triangular(F.Q)
+    Fpinv = Dory.inverse_permutation(F.p)
+
+    # X = transpose(Qinv[Fpinv,:])
+    X = transpose(Qinv)[Fpinv,:]
+    
+    #Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
+
+    
+    # Next, extract the algebra basis.
+    B = Dict()
+    m = size(F.Q,1) # The dimension of the quotient algebra.
+
+    # Extract the column to monomial correspondence.    
+    key_array = first.(sort(collect(L0), by=x->x[2]))
+
+    for i in 1:m
+        push!(B,  key_array[F.q[i]]=>i)
+        # should test if the diag. coeff. is not small
+    end
+
+    Nr = N*X
+
+    #test_rows = sorted_column_labels[F.q[1:m]]
+    #@info "" test_rows
+    #@info "" valuation.(Array(Nr[test_rows, :]))
+    
+    return N*X, B
+end
+        
 @doc Markdown.doc"""
     iwasawa_step(N :: Array{T,2} where T <: Number, L0)
     iwasawa_step(N :: Array{padic,2} , IdL0)
