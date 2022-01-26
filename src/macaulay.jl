@@ -301,8 +301,11 @@ end
 
 function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous, LP)
 
+    the_ring = parent(P[1])
+    X = gens(the_ring)
+
     ## Construct the multiplication matrices directly.
-    B = kbase_gens_from_GB(P, LP)
+    B = kbase(P, LP, is_homogeneous)
 
     xi_operators = []
     for v in vcat([the_ring(1)], X)
@@ -310,19 +313,12 @@ function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Gener
     end
 
     # TODO: The user should specify the prime.
-    Qp = PadicField(23,30)
+    Qp = PadicField(29,30)
     
-    M = [matrix(Qp, [[coeff(g, b) for b in B] for g in op]) for op in xi_operators]
+    M = [matrix(Qp, [coeff(g, b) for b in B,  g in op]) for op in xi_operators]
     M = [m.entries for m in M]
 
-    ## The prime will be specified by the user..
-    ## The precision should also be specified, or the user should request
-    ## some feature to be invoked.
-
-    
-    # In the affine system, the distinguis_homogeneoused monomial (i.e, "1" for that case) does 
-    # not correspond to a coordinate.
-    if is_homogeneous return Xi else return Xi[:,2:size(Xi,2)] end    
+    return M    
 end
 
 # TODO: XXX: This function should replace the previous version if it tests well.
@@ -498,10 +494,22 @@ end
 # end
 
 import Base.rem
-function rem(f::Hecke.Generic.MPolyElem{<:Hecke.FieldElem},
-             P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
+function rem(f::Hecke.Generic.MPolyElem{T}, P::Array{<:Hecke.Generic.MPolyElem{T},1}) where T
     return divrem(f,P)[2]
 end
+
+function rem(f::Hecke.Generic.PolyElem{T}, P::Array{<:Hecke.Generic.PolyElem{T},1}) where T
+    return divrem(f,P)[2]
+end
+
+function rem(f::Hecke.Generic.MPolyElem{T}, P::Hecke.Generic.MPolyElem{T}) where T
+    return divrem(f,P)[2]
+end
+
+function rem(f::Hecke.Generic.PolyElem{T}, P::Hecke.Generic.PolyElem{T}) where T
+    return divrem(f,P)[2]
+end
+
 
 # function rem(f::Singular.spoly{<:Hecke.FieldElem},
 #              P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
@@ -531,7 +539,7 @@ function kbase(P, LP, ish)
         mons = monomials_of_degree(parent(P[1]), 0:D)
     end
     
-    divisible_by_LP_elt = f->any(iszero(divrem(f, lp)[2]) for lp in LP)
+    divisible_by_LP_elt = f->any(iszero(rem(f, lp)) for lp in LP)
     
     return filter(!divisible_by_LP_elt, mons)
 end
