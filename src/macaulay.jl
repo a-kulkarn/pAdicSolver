@@ -98,18 +98,22 @@ function _solve_system_method_dispatch(P, is_homogeneous; method = :truncated_no
 
     if method in [:truncated_normal_form, :tnf, :macaulay]
         return _solver_engine(P, is_homogeneous; method = :tnf, kwds...)
+
+    elseif method in [:given_groebner, :given_GB]
+        return _solver_engine(P, is_homogeneous; method = :given_GB, kwds...)
         
     elseif method == :groebner
         # 1. Compute the groebner basis over the exact field.
         I = ideal(parent(P[1]), P)
-        gb = Oscar.groebner_basis(I)
+        #gb = Oscar.groebner_basis(I)
 
         # Fetch the leading monomials somehow.
         @error "method == :groebner is not implemented."
         LP = "TODO"
         
         # 2. Call the Solver Engine with the groebner basis and leading monomials.
-        return _solver_engine(P, is_homogeneous, LP; kwds...)        
+        return _solver_engine(P, is_homogeneous, LP; kwds...)
+        
     elseif method isa String
         @error "Method must be of type Symbol."
     else
@@ -126,12 +130,12 @@ end
 Given a system of polynomials `P` that is a Groebner basis, with leading monomials `LP`, return
 the solutions to the polynomial system `P`.
 """
-function solve_affine_groebner_system(P, LP; kwds...)
-    return _solver_engine(P, false, LP; kwds...)
+function solve_affine_groebner_system(P; kwds...)
+    return _solver_engine(P, false; method = :given_GB, kwds...)
 end
 
-function solve_projective_groebner_system(P, LP; kwds...)
-    return _solver_engine(P, true, LP; kwds...)
+function solve_projective_groebner_system(P; method = :given_GB, kwds...)
+    return _solver_engine(P, true; kwds...)
 end
 
 
@@ -213,23 +217,23 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = "
     
 end
 
-function _solver_engine(P, is_homogeneous, leading_mons_of_P; eigenvector_method = "power", kwds...)
+# function _solver_engine(P, is_homogeneous; eigenvector_method = "power", kwds...)
     
-    # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
-    #       where B is some change of basis matrix.
-    #
-    # Dispatch on the method argument.
-    M = _multiplication_matrices(Val(:given_GB), P, is_homogeneous, leading_mons_of_P; kwds...)
+#     # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
+#     #       where B is some change of basis matrix.
+#     #
+#     # Dispatch on the method argument.
+#     M = _multiplication_matrices(Val(:given_GB), P, is_homogeneous, leading_mons_of_P; kwds...)
 
-    # Apply the Eigenvector method.
-    @vtime :padic_solver Xi = normalized_simultaneous_eigenvalues(M, is_homogeneous, eigenvector_method)
+#     # Apply the Eigenvector method.
+#     @vtime :padic_solver Xi = normalized_simultaneous_eigenvalues(M, is_homogeneous, eigenvector_method)
     
-    # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
-    # not correspond to a coordinate.
+#     # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
+#     # not correspond to a coordinate.
     
-    if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end
+#     if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end
     
-end
+# end
 
 
 @doc Markdown.doc"""
@@ -299,30 +303,34 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
     return M
 end
 
-function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous, LP)
+function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous; ordering=ordering(P))
 
+    @info ordering
+    
     the_ring = parent(P[1])
     K = base_ring(the_ring)
     X = gens(the_ring)
-
-    ## Construct the multiplication matrices directly.
-    B = kbase(P, LP, is_homogeneous)
-
-    R, vars = PolynomialRing(K, length(gens(the_ring)), ordering=:degrevlex)
-
-    PR = [change_parent(R, g) for g in P]
-    BR = [change_parent(R, b) for b in B]
+    insert!(X, 1, the_ring(1))
     
-    xi_operators = []
-    XR = [change_parent(R, v) for v in vcat([the_ring(1)], X)]
-    for v in XR
-        push!(xi_operators, [rem(v*b, PR) for b in BR])
-    end
+    # Ensure that the specified ordering is used for reduction/kbase.
+    R, vars = PolynomialRing(K, length(gens(the_ring)), ordering=ordering)
+    PR = [change_parent(R, g) for g in P]
+
+    # Determine the basis for the quotient algebra.
+    BR = kbase(PR, is_homogeneous)
+
+    @info BR
+    
+    # Construct the multiplication operators as polynomial elements.
+    XR = [change_parent(R, v) for v in X]
+    xi_operators = [[rem(v*b, PR) for b in BR] for v in XR]
 
     if !(K isa Hecke.NonArchLocalField)
         # TODO: Figure out what the user should do in this case...
         K = PadicField(29,30)
     end
+
+    #@info xi_operators
     
     M = [matrix(K, [coeff(g, b) for b in BR, g in op]) for op in xi_operators]
     M = [m.entries for m in M]
@@ -535,18 +543,23 @@ end
 # end
 
 @doc Markdown.doc"""
-    kbase(P, LP. ish)
+    kbase(P, ish)
 
 Given a Groebner basis `P` for an ideal, and the corresponding leading monomials `LP`, return a basis
 for the quotient algebra `k[x1, ..., xn]/P` as a k-vector space.
+
+It is assumed that `P` is a Groebner basis with respect to the ordering of the parent.
 """
-function kbase(P, LP, ish)
+function kbase(P, ish)
 
     # TODO: This code is not optimal since it generates more monomials than is necessary.
     #       It is much more efficient to enumerate by degree and build up the basis via
     #       multiplying by monomials.
-    
-    D = maximum(total_degree(f) for f in LP)
+
+    LP = leading_monomial.(P)
+
+    @info LP
+    D = maximum(total_degree(f) for f in P)
 
     if ish
         mons = monomials_of_degree(parent(P[1]), D)
@@ -566,31 +579,31 @@ end
 #
 ######################################################################################################
 
-@doc Markdown.doc"""
-    Given a list of polynomials `P`, which is a Groebner basis for some ideal,
-    as well as the list of leading monomials LP, construct the generators for the quotient
-    ring `K[x]/P` as a K-vector space 
-"""
-function kbase_from_GB(P, LP)
+# @doc Markdown.doc"""
+#     Given a list of polynomials `P`, which is a Groebner basis for some ideal,
+#     as well as the list of leading monomials LP, construct the generators for the quotient
+#     ring `K[x]/P` as a K-vector space 
+# """
+# function kbase_from_GB(P, LP)
 
-    isempty(P) && @error "Input list of polynomials must not be empty."
+#     isempty(P) && @error "Input list of polynomials must not be empty."
     
-    R = parent(P[1])
+#     R = parent(P[1])
 
-    for m in monomials_of_degree
+#     for m in monomials_of_degree
         
-    end
+#     end
         
-    @error "Not implemented."
-end
+#     @error "Not implemented."
+# end
     
-function kbase_from_GB(I)
-    Oscar.singular_assure(I)
-    sI = I.gens.S
-    sI.isGB = true
+# function kbase_from_GB(I)
+#     Oscar.singular_assure(I)
+#     sI = I.gens.S
+#     sI.isGB = true
 
-    return sing_kbase = Oscar.Singular.kbase(sI)
-end
+#     return sing_kbase = Oscar.Singular.kbase(sI)
+# end
 
 
 ######################################################################################################
@@ -599,7 +612,7 @@ end
 #
 ######################################################################################################
 
-        @doc Markdown.doc"""
+@doc Markdown.doc"""
     iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
     Return the QR-factorization object (For PN_0P' = QR, return <inv(P)Q, R, P'>)
     together with  Nr = N*inv(inv(P)Q)^T.
@@ -662,7 +675,7 @@ end
 
 function iwasawa_step(N :: Array{padic,2} , IdL0)
     
-    F = padic_qr( transpose(matrix(N[IdL0,:])) , col_pivot=Val(true))
+    F = padic_qr(transpose(matrix(N[IdL0,:])) , col_pivot=Val(true))
     Qinv = Dory.inv_unit_lower_triangular(F.Q)
     Fpinv= Dory.inverse_permutation(F.p)
 
@@ -672,14 +685,14 @@ function iwasawa_step(N :: Array{padic,2} , IdL0)
     return Farr, N*X
 end
 
-function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
+function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0)
 
-    F = padic_qr( transpose(N[ sort(collect(values(L0))),:]) , col_pivot=Val(true))
+    F = padic_qr(transpose(N[ sort(collect(values(L0))),:]), col_pivot=Val(true))
     Qinv = Dory.inv_unit_lower_triangular(F.Q)
     Fpinv= Dory.inverse_permutation(F.p)
 
     X = Qinv[Fpinv,:]
-    Farr = QRPadicArrayPivoted( (F.Q.entries)[Fpinv,:], F.R.entries, F.q)
+    Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
     
     return Farr, N*X
 end

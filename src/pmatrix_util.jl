@@ -117,10 +117,12 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     
     # The rectangular solve step is enough to kill off any helpful data mod p.
     @vtime :padic_solver 2 I0 = inv(M[1])
-    @vtime :padic_solver 2 Mg = I0 * M[2]
+    @vtime :padic_solver 2 Mg = I0 * (M[2] + M[3] + M[5] + M[6])
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     X, V = Dory.block_schur_form(Mg)
+
+    @info " " valuation.(X) valuation.(V)
     
     #println("eigvalues: ", invariant_subspaces.values)
     #println()
@@ -131,7 +133,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
         for j in 1:length(M)
 
             # Put the other matrix into schur form
-            Y= inv(V)*(I0*M[j])*V
+            Y = inv(V)*(I0*M[j])*V
             
             for i=1:size(X,2)
                 if (i == 1 && iszero(X[i, i+1])) ||
@@ -166,7 +168,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
                     sing_vals = singular_values(block)
 
-                    @info sing_vals
+                    @info valuation.(sing_vals) iszero.(sing_vals)
                     
                     # In any particular block, the valuations of the eigenvalues are equal.
                     # We need to check if the block has a kernel, as a special default value needs to be assigned.
