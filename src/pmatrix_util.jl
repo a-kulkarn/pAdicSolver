@@ -1,4 +1,5 @@
 
+const DEFAULT_VALUATION_OF_ZERO = BigInt(2^63-1)
 
 """
     nullspace(A::Array{padic,2})
@@ -108,7 +109,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     
     M = [matrix(A) for A in inputM]
     Qp = base_ring(M[1])
-    Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
+    Mrand = sum(A * rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
     @vprint :padic_solver 2 "Valuations of singular values: "
     @vprint :padic_solver 2 valuation.(singular_values(M[1]))
@@ -117,7 +118,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     
     # The rectangular solve step is enough to kill off any helpful data mod p.
     @vtime :padic_solver 2 I0 = inv(M[1])
-    @vtime :padic_solver 2 Mg = I0*M[2]
+    @vtime :padic_solver 2 Mg = I0 * M[2]
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     X, V = Dory.block_schur_form(Mg)
@@ -134,9 +135,9 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
             Y= inv(V)*(I0*M[j])*V
             
             for i=1:size(X,2)
-                if (i==1 && iszero(X[i,i+1])) ||
-                    (i==size(X,2) && iszero(X[i-1,i]) ) ||
-                    (iszero(X[i,i-1]) && iszero(X[i+1,i]))
+                if (i == 1 && iszero(X[i, i+1])) ||
+                    (i==size(X, 2) && iszero(X[i-1, i])) ||
+                    (iszero(X[i, i-1]) && iszero(X[i+1, i]))
                     
                     push!(sol_array[j], Y[i,i])
                 end
@@ -163,13 +164,16 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
                     
                     block_inds = block_start_index:i
                     block = Y[block_inds, block_inds]
-                    sing_vals = valuation.(singular_values(block))
+
+                    sing_vals = singular_values(block)
 
                     # In any particular block, the valuations of the eigenvalues are equal.
-                    if Qp.prec_max in sing_vals
-                        val_of_eigenvalues = Qp.prec_max
+                    # We need to check if the block has a kernel, as a special default value needs to be assigned.
+                    if zero(Qp) in sing_vals
+                        val_of_eigenvlues = DEFAULT_VALUATION_OF_ZERO
                     else
-                        val_of_eigenvalues = sum(sing_vals) // length(sing_vals)
+                        sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
+                        val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
                     end
                     
                     push!(ycoords, [val_of_eigenvalues for r in block_inds]...)
@@ -179,9 +183,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
             push!(sol_array, ycoords)
         end
 
-        if !ish
-
-        else
+        if ish
             error("Tropical mode not implemented for projective systems.")
         end
         #return hcat( sol_array[2:length(sol_array)]...)
