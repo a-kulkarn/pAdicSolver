@@ -28,8 +28,7 @@ specific case that the matrices are mult-by-coordinate-variable operators on R/I
 INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
 Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 """
-function normalized_simultaneous_eigenvalues(
-    inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
+function normalized_simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
 
     if method == "schur" || method == "qr" || method == "tropical"
         return nse_schur(inputM, ish, method)
@@ -46,7 +45,7 @@ function normalized_simultaneous_eigenvalues(
     
     # The rectangular solve step is enough to kill off any helpful data mod p.
     @vtime :padic_solver 2 I0 = rectangular_solve(M[1],identity_matrix(Mrand.base_ring,size(M[1],1)))
-    @vtime :padic_solver 2 Mg = I0*Mrand
+    @vtime :padic_solver 2 Mg = I0 * Mrand
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     eigen_subspaces  = eigspaces(Mg, method=method)
@@ -69,7 +68,7 @@ function normalized_simultaneous_eigenvalues(
     function normalize_solution!(Xi, ish)
         Sol = Xi
         
-        if (!ish)
+        if !ish
             i=1            
             while i <= size(Sol,1)
                 scale_factor = Sol[i,1]
@@ -170,7 +169,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
                     # In any particular block, the valuations of the eigenvalues are equal.
                     # We need to check if the block has a kernel, as a special default value needs to be assigned.
                     if zero(Qp) in sing_vals
-                        val_of_eigenvlues = DEFAULT_VALUATION_OF_ZERO
+                        val_of_eigenvalues = DEFAULT_VALUATION_OF_ZERO
                     else
                         sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
                         val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)

@@ -257,20 +257,20 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
     the_ring = parent(P[1])
     X = gens(the_ring)
     
-    @vprint :padic_solver 2 "\n-- Degrees $(map(p->total_degree(p),P)))"
+    @vprint :padic_solver 2 "\n-- Degrees $(map(p->total_degree(p),P)))\n"
     
     t0 = time()
     R, L = macaulay_mat(P, X, rho, is_homogeneous)
     L0 = monomials_divisible_by_x0(L, is_homogeneous)
 
-    msg = "-- Macaulay matrix $size(R,1) x $size(R,2) $(time()-t0) (s)"
+    msg = "-- Macaulay matrix $size(R,1) x $size(R,2) $(time()-t0) (s)\n"
     @vprint :padic_solver msg
     t0 = time()
     
     @vtime :padic_solver N = nullspace(R)[2]
     
-    @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
-    msg = string("-- Null space ", size(N,1), " x ", size(N,2), "   ", time()-t0, " (s)"); t0 = time()
+    @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))\n"
+    msg = string("-- Null space ", size(N,1), " x ", size(N,2), "   ", time()-t0, " (s)\n"); t0 = time()
     @vprint :padic_solver msg
 
     # The idea of the QR step is two-fold:
@@ -285,7 +285,7 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
     F, Nr = iwasawa_step(N, L0)
     B = permute_and_divide_by_x0(L0, F, is_homogeneous)
 
-    @vprint :padic_solver sprint(show, "-- Qr basis ",  length(B), "   ", time()-t0, "(s)")
+    @vprint :padic_solver "-- Qr basis $length(B)   $(time()-t0) (s)\n"
     t0 = time()
 
     @vtime :padic_solver M = mult_matrices(B, X, Nr, L, is_homogeneous)
