@@ -473,29 +473,29 @@ end
 #
 ######################################################################################################
 
-function (R::FlintPadicField)(a::Singular.n_Q)
-    return R(FlintQQ(a))
-end
+# function (R::FlintPadicField)(a::Singular.n_Q)
+#     return R(FlintQQ(a))
+# end
 
-function kbase_gens_from_GB(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
+# function kbase_gens_from_GB(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem},1})
 
-    the_ring = parent(P[1])
-    @assert base_ring(the_ring) == FlintQQ
+#     the_ring = parent(P[1])
+#     @assert base_ring(the_ring) == FlintQQ
     
-    sing_R, sing_vars = Singular.PolynomialRing(Singular.QQ,
-                                                ["x$i" for i=1:nvars(the_ring)],
-                                                ordering=ordering(the_ring))
+#     sing_R, sing_vars = Singular.PolynomialRing(Singular.QQ,
+#                                                 ["x$i" for i=1:nvars(the_ring)],
+#                                                 ordering=ordering(the_ring))
     
-    singular_B = kbase_gens_from_GB(map(f-> change_base_ring(f, Singular.QQ, sing_R), P))
+#     singular_B = kbase_gens_from_GB(map(f-> change_base_ring(f, Singular.QQ, sing_R), P))
 
-    return map(f-> change_base_ring(f, Hecke.FlintQQ, the_ring), singular_B)
-end
+#     return map(f-> change_base_ring(f, Hecke.FlintQQ, the_ring), singular_B)
+# end
 
-function kbase_gens_from_GB(P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
-    I = Singular.Ideal(parent(P[1]), P)
-    I.isGB = true
-    return gens(Singular.kbase(I))
-end
+# function kbase_gens_from_GB(P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
+#     I = Singular.Ideal(parent(P[1]), P)
+#     I.isGB = true
+#     return gens(Singular.kbase(I))
+# end
 
 import Base.rem
 function rem(f::Hecke.Generic.MPolyElem{<:Hecke.FieldElem},
@@ -503,13 +503,39 @@ function rem(f::Hecke.Generic.MPolyElem{<:Hecke.FieldElem},
     return divrem(f,P)[2]
 end
 
-function rem(f::Singular.spoly{<:Hecke.FieldElem},
-             P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
+# function rem(f::Singular.spoly{<:Hecke.FieldElem},
+#              P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})
 
-    I = Singular.Ideal(parent(P[1]), P)
-    I.isGB = true
-    return Singular.reduce(f, I)
+#     I = Singular.Ideal(parent(P[1]), P)
+#     I.isGB = true
+#     return Singular.reduce(f, I)
+# end
+
+@doc Markdown.doc"""
+    kbase(P, LP. ish)
+
+Given a Groebner basis `P` for an ideal, and the corresponding leading monomials `LP`, return a basis
+for the quotient algebra `k[x1, ..., xn]/P` as a k-vector space.
+"""
+function kbase(P, LP, ish)
+
+    # TODO: This code is not optimal since it generates more monomials than is necessary.
+    #       It is much more efficient to enumerate by degree and build up the basis via
+    #       multiplying by monomials.
+    
+    D = maximum(total_degree(f) for f in LP)
+
+    if ish
+        mons = monomials_of_degree(parent(P[1]), D)
+    else
+        mons = monomials_of_degree(parent(P[1]), 0:D)
+    end
+    
+    divisible_by_LP_elt = f->any(iszero(divrem(f, lp)[2]) for lp in LP)
+    
+    return filter(!divisible_by_LP_elt, mons)
 end
+
 
 ######################################################################################################
 # 
