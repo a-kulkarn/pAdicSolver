@@ -153,16 +153,16 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
             # Put the other matrix into schur form
             ycoords = Array{Number,1}()
-            Y= V*(I0*M[j])*inv(V)
+            Y = V * (I0 * M[j]) * inv(V)
             block_start_index = 1
 
             #display(valuation.(Y))
             
             for i=1:size(X,2)
-                if (i == size(X,2) || iszero(X[i+1,i]))
+                if (i == size(X,2) || iszero(X[i+1, i]))
                     
                     block_inds = block_start_index:i
-                    block = Y[block_inds,block_inds]
+                    block = Y[block_inds, block_inds]
                     sing_vals = valuation.(singular_values(block))
 
                     # In any particular block, the valuations of the eigenvalues are equal.
@@ -172,7 +172,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
                         val_of_eigenvalues = sum(sing_vals) // length(sing_vals)
                     end
                     
-                    push!( ycoords, [val_of_eigenvalues for r in block_inds]...)
+                    push!(ycoords, [val_of_eigenvalues for r in block_inds]...)
                     block_start_index = i+1
                 end                
             end
@@ -185,7 +185,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
             error("Tropical mode not implemented for projective systems.")
         end
         #return hcat( sol_array[2:length(sol_array)]...)
-        return hcat( sol_array...)
+        return hcat(sol_array...)
     end
     
     function normalize_solution!(Xi, ish)
