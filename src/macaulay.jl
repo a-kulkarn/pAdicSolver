@@ -308,20 +308,26 @@ function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Gener
     ## Construct the multiplication matrices directly.
     B = kbase(P, LP, is_homogeneous)
 
+    R, vars = PolynomialRing(K, length(gens(the_ring)), ordering=:degrevlex)
+
+    PR = [change_parent(R, g) for g in P]
+    BR = [change_parent(R, b) for b in B]
+    
     xi_operators = []
-    for v in vcat([the_ring(1)], X)
-        push!(xi_operators, [rem(v*b, P) for b in B])
+    XR = [change_parent(R, v) for v in vcat([the_ring(1)], X)]
+    for v in XR
+        push!(xi_operators, [rem(v*b, PR) for b in BR])
     end
 
-    if !(K isa Hecke.LocalField)
+    if !(K isa Hecke.NonArchLocalField)
         # TODO: Figure out what the user should do in this case...
         K = PadicField(29,30)
     end
     
-    M = [matrix(K, [coeff(g, b) for b in B, g in op]) for op in xi_operators]
+    M = [matrix(K, [coeff(g, b) for b in BR, g in op]) for op in xi_operators]
     M = [m.entries for m in M]
 
-    return M    
+    return M 
 end
 
 # TODO: XXX: This function should replace the previous version if it tests well.
@@ -356,7 +362,7 @@ function _multiplication_matrices_II(method::Val{:tnf}, P::Array{<:Hecke.Generic
     @vtime :padic_solver M = mult_matrices(B, X, Nr, L, is_homogeneous)
     return M
 end
-    
+
 ######################################################################################################
 #
 # Truncated Normal Form logic
@@ -461,6 +467,7 @@ function truncated_normal_form_section(N, L, L0, ish)
     return Nr, B # Not actually a section, but whatever.
 end
 
+
 ######################################################################################################
 #
 #  Singular Dependency:
@@ -509,6 +516,15 @@ function rem(f::Hecke.Generic.PolyElem{T}, P::Hecke.Generic.PolyElem{T}) where T
     return divrem(f,P)[2]
 end
 
+
+function change_parent(P, f)
+    K  = base_ring(P)
+    fP = MPolyBuildCtx(P)
+    for (coeff, exp_vec) = zip(coefficients(f), exponent_vectors(f))
+        push_term!(fP, K(coeff), exp_vec)
+    end
+    return finish(fP)
+end 
 
 # function rem(f::Singular.spoly{<:Hecke.FieldElem},
 #              P::Array{<:Singular.spoly{<:Hecke.FieldElem},1})

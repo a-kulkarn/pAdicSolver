@@ -166,6 +166,8 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
                     sing_vals = singular_values(block)
 
+                    @info sing_vals
+                    
                     # In any particular block, the valuations of the eigenvalues are equal.
                     # We need to check if the block has a kernel, as a special default value needs to be assigned.
                     if zero(Qp) in sing_vals
