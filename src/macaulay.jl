@@ -209,7 +209,7 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = "
     # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
     
-    if is_homogeneous return Xi else return Xi[:,2:size(Xi,2)] end
+    if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end
     
 end
 
@@ -227,7 +227,7 @@ function _solver_engine(P, is_homogeneous, leading_mons_of_P; eigenvector_method
     # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
     
-    if is_homogeneous return Xi else return Xi[:,2:size(Xi,2)] end
+    if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end
     
 end
 
@@ -302,6 +302,7 @@ end
 function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous, LP)
 
     the_ring = parent(P[1])
+    K = base_ring(the_ring)
     X = gens(the_ring)
 
     ## Construct the multiplication matrices directly.
@@ -312,10 +313,12 @@ function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Gener
         push!(xi_operators, [rem(v*b, P) for b in B])
     end
 
-    # TODO: The user should specify the prime.
-    Qp = PadicField(29,30)
+    if !(K isa Hecke.LocalField)
+        # TODO: Figure out what the user should do in this case...
+        K = PadicField(29,30)
+    end
     
-    M = [matrix(Qp, [coeff(g, b) for b in B,  g in op]) for op in xi_operators]
+    M = [matrix(K, [coeff(g, b) for b in B, g in op]) for op in xi_operators]
     M = [m.entries for m in M]
 
     return M    
@@ -345,8 +348,6 @@ function _multiplication_matrices_II(method::Val{:tnf}, P::Array{<:Hecke.Generic
     @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
     @vprint :padic_solver "-- Null space $size(N,1) x $size(N,2)  $(time()-t0) (s)"
     
-    # TODO: Need to figure out what to do with missing monomials.
-    # TODO: Is this resolved???
     t0 = time()
     Nr, B = truncated_normal_form_section(N, L, L0, is_homogeneous)
    
@@ -375,8 +376,7 @@ function truncated_normal_form_map(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.Fi
     t0 = time()
     R, L = macaulay_mat(P, X, rho, ish)
 
-    msg = "-- Macaulay matrix $size(R,1) x $size(R,2) $(time()-t0) (s)"
-    @vprint :padic_solver msg
+    @vprint :padic_solver "-- Macaulay matrix $size(R,1) x $size(R,2) $(time()-t0) (s)"
     t0 = time()
     
     @vtime :padic_solver N = nullspace(R)[2]
@@ -432,10 +432,9 @@ function truncated_normal_form_map(P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.Fi
 
     # The monomials for the set such that [xi]B \in V.
     L0 = monomials_divisible_by_x0(L, ish) 
-    
-    verbose && println("-- -- rank of Macaulay matrix ", size(R,2) - size(N,2))
-    verbose && println("-- Null space $(size(N,1)) x $(size(N,2))   $(time()-t0) (s)");
-    t0 = time()
+
+    @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
+    @vprint :padic_solver "-- Null space $size(N,1) x $size(N,2)  $(time()-t0) (s)"
 
     return N, L, L0
 end
