@@ -1,6 +1,12 @@
 
 const DEFAULT_VALUATION_OF_ZERO = BigInt(2^63-1)
 
+######################################################################################################
+#
+#  Legacy code
+#
+######################################################################################################
+
 """
     nullspace(A::Array{padic,2})
 
@@ -11,11 +17,30 @@ function nullspace(A::Array{padic,2})
     return Hecke.nullspace(M)[2].entries
 end
 
+
 struct QRPadicArrayPivoted
     Q::Array{padic,2}
     R::Array{padic,2}
     p::Array{Int64,1}
 end
+
+######################################################################################################
+#
+#  Tropical shifting choices in QR iteration
+#
+######################################################################################################
+
+# Function to feed into Dory.block_schur_form for optimal performance
+function tropical_shift(B)
+    return zero(base_ring(B))
+end
+
+
+######################################################################################################
+#
+#  Normalized Simultaneous Eigenvalues.
+#
+######################################################################################################
 
 
 @doc Markdown.doc"""
@@ -55,7 +80,7 @@ function normalized_simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where
     #println("eigspaces: ", length(invariant_subspaces.spaces))
 
 
-    X = matrix( Qp, fill(zero(Qp), length(eigen_subspaces.spaces) ,length(M)))
+    X = matrix( Qp, fill(zero(Qp), length(eigen_subspaces.spaces), length(M)))
     for j in 1:length(M)
         for i in 1:length(eigen_subspaces.spaces)
             
@@ -119,16 +144,15 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     @vtime :padic_solver 2 I0 = inv(M[1])
     @vtime :padic_solver 2 Mg = I0 * (M[2] + M[3] + M[5] + M[6])
 
-    # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-    X, V = Dory.block_schur_form(Mg)
-
-    @info " " valuation.(X) valuation.(V)
     
     #println("eigvalues: ", invariant_subspaces.values)
     #println()
     #println("eigspaces: ", length(invariant_subspaces.spaces))
 
     if method != "tropical"
+        # eigenvectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
+        X, V = Dory.block_schur_form(Mg)
+        
         sol_array = Array{Array{padic,1},1}()
         for j in 1:length(M)
 
@@ -148,6 +172,10 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     end
 
     if method == "tropical"
+        # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
+        X, V = Dory.block_schur_form(Mg, shift=tropical_shift)
+
+        
         sol_array = Array{Array{Number,1},1}()
         #display(valuation.(X))
         
