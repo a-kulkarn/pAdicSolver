@@ -109,7 +109,7 @@ function _solve_system_method_dispatch(P, is_homogeneous; method = :truncated_no
         LP = "TODO"
         
         # 2. Call the Solver Engine with the groebner basis and leading monomials.
-        return _solver_engine(P, is_homogeneous, LP)        
+        return _solver_engine(P, is_homogeneous, LP; kwds...)        
     elseif method isa String
         @error "Method must be of type Symbol."
     else
@@ -126,12 +126,12 @@ end
 Given a system of polynomials `P` that is a Groebner basis, with leading monomials `LP`, return
 the solutions to the polynomial system `P`.
 """
-function solve_affine_groebner_system(P, LP)
-    return _solver_engine(P, false, LP)
+function solve_affine_groebner_system(P, LP; kwds...)
+    return _solver_engine(P, false, LP; kwds...)
 end
 
-function solve_projective_groebner_system(P, LP)
-    return _solver_engine(P, true, LP)
+function solve_projective_groebner_system(P, LP; kwds...)
+    return _solver_engine(P, true, LP; kwds...)
 end
 
 
