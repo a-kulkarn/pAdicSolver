@@ -32,3 +32,6 @@ nothing
 #pAdicSolver.solve_affine_groebner_system(curry.(GB), curry.(lp))
 #pAdicSolver.solve_affine_system(curry.(GB), eigenvector_method="tropical")
 
+
+# The result we are supposed to get
+true_solution = convert(Matrix{Rational{BigInt}}, hcat([ 0, -1, 0, 0, 0 ], [0, -1, -1, -1, -1 ], [ 0, -1, -1, -2, -1 ], [0, -1, -1, -2, -1 ]))

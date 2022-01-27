@@ -69,7 +69,7 @@ function normalized_simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where
     # We will assume that M[1] is well-conditioned. for now.
     
     # The rectangular solve step is enough to kill off any helpful data mod p.
-    @vtime :padic_solver 2 I0 = rectangular_solve(M[1],identity_matrix(Mrand.base_ring,size(M[1],1)))
+    @vtime :padic_solver 2 I0 = rectangular_solve(M[1], identity_matrix(Mrand.base_ring,size(M[1],1)))
     @vtime :padic_solver 2 Mg = I0 * Mrand
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
@@ -80,7 +80,7 @@ function normalized_simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where
     #println("eigspaces: ", length(invariant_subspaces.spaces))
 
 
-    X = matrix( Qp, fill(zero(Qp), length(eigen_subspaces.spaces), length(M)))
+    X = matrix(Qp, fill(zero(Qp), length(eigen_subspaces.spaces), length(M)))
     for j in 1:length(M)
         for i in 1:length(eigen_subspaces.spaces)
             
