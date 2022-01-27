@@ -150,7 +150,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
     if method != "tropical"
 
-        @vtime :padic_solver 2 Mg = I0 * (M[2] + M[3] + M[5] + M[6])
+        Mg = I0 * (M[2] + M[3] + M[5] + M[6])
         
         # eigenvectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
         X, V = Dory.block_schur_form(Mg)
@@ -175,12 +175,11 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
     if method == "tropical"
 
-        @vtime :padic_solver 2 Mg = M[5]
+        Mg = I0 * M[2]
         
         
         # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
         X, V = Dory.block_schur_form(Mg, shift=tropical_shift)
-
         
         sol_array = Array{Array{Number,1},1}()
         #display(valuation.(X))
@@ -202,7 +201,7 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
 
                     sing_vals = singular_values(block)
 
-                    @info valuation.(sing_vals) iszero.(sing_vals)
+                    @info valuation.(sing_vals)
                     
                     # In any particular block, the valuations of the eigenvalues are equal.
                     # We need to check if the block has a kernel, as a special default value needs to be assigned.
@@ -254,3 +253,81 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     return normalize_solution!(X, ish)
     
 end
+
+
+function tropical_nse(inputM)
+    
+    M = [matrix(A) for A in inputM]
+    Qp = base_ring(M[1])
+
+    # The rectangular solve step is enough to kill off any helpful data mod p.
+    I0 = inv(M[1])
+    
+    ########################################
+    # Simultaneous diagonalization.
+
+    X, V = Dory.block_schur_form(I0 * M[2], shift=tropical_shift)
+
+    # Setup containers
+    B = X
+    C = deepcopy(X)
+    zero_mat = zero_matrix(Qp, size(B,1), size(B, 2))
+    
+    for A in M[3:length(M)]
+        B = mul!(B, I0, A)
+
+        # Compute B = V * B * inv(B)
+        B = let
+            C = mul!(C, V, B)
+            mul!(B, C, inv(V))
+        end
+        
+        X, Vi = Dory.block_schur_form(B, shift=tropical_shift)
+
+        # Compute V = Vi * V
+        B = mul!(B, Vi, V)
+        V = add!(V, B, zero_mat)
+    end
+
+    ## Cache the inverse
+    IV = inv(V)
+    
+    ########################################
+    # Extract eigenvalues after simultaneous diagonalization.
+    sol_array = Array{Array{Number,1},1}()
+    for j in 1:length(M)
+
+        # Put the other matrix into schur form
+        ycoords = Array{Number,1}()
+        Y = V * (I0 * M[j]) * IV
+        block_start_index = 1
+
+        for i=1:size(X,2)
+            if (i == size(X,2) || iszero(X[i+1, i]))
+                
+                block_inds = block_start_index:i
+                block = Y[block_inds, block_inds]
+
+                sing_vals = singular_values(block)
+
+                #@info valuation.(sing_vals)
+                
+                # In any particular block, the valuations of the eigenvalues are equal.
+                # We need to check if the block has a kernel, as a special default value needs to be assigned.
+                if zero(Qp) in sing_vals
+                    val_of_eigenvalues = DEFAULT_VALUATION_OF_ZERO
+                else
+                    sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
+                    val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
+                end
+                
+                push!(ycoords, [val_of_eigenvalues for r in block_inds]...)
+                block_start_index = i+1
+            end                
+        end
+        push!(sol_array, ycoords)
+    end
+
+    return hcat(sol_array...)
+end
+

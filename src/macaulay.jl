@@ -305,8 +305,6 @@ end
 
 function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous; ordering=ordering(P))
 
-    @info ordering
-    
     the_ring = parent(P[1])
     K = base_ring(the_ring)
     X = gens(the_ring)
