@@ -142,7 +142,6 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     
     # The rectangular solve step is enough to kill off any helpful data mod p.
     @vtime :padic_solver 2 I0 = inv(M[1])
-    @vtime :padic_solver 2 Mg = I0 * (M[2] + M[3] + M[5] + M[6])
 
     
     #println("eigvalues: ", invariant_subspaces.values)
@@ -150,6 +149,9 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     #println("eigspaces: ", length(invariant_subspaces.spaces))
 
     if method != "tropical"
+
+        @vtime :padic_solver 2 Mg = I0 * (M[2] + M[3] + M[5] + M[6])
+        
         # eigenvectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
         X, V = Dory.block_schur_form(Mg)
         
@@ -172,6 +174,10 @@ function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool
     end
 
     if method == "tropical"
+
+        @vtime :padic_solver 2 Mg = M[5]
+        
+        
         # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
         X, V = Dory.block_schur_form(Mg, shift=tropical_shift)
 
