@@ -37,7 +37,7 @@ end
 
 M = pAdicSolver._multiplication_matrices(Val(:given_GB), curry.(GB), false, ordering=:degrevlex)
 
-sol = pAdicSolver.simultaneous_eigenvalues(M, method=:tropical)
+sol = pAdicSolver.simultaneous_eigenvalues([matrix(A) for A in M], method=:tropical)
 
 @info " " sol
 

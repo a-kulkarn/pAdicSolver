@@ -86,23 +86,23 @@ specific case that the matrices are mult-by-coordinate-variable operators on R/I
 INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
 Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 """
-function simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem; method=:schur)
+function simultaneous_eigenvalues(M::Vector; method=:schur)
 
     if method in [:schur, :qr]
-        return simultaneous_eigenvalues_schur(inputM)
+        return simultaneous_eigenvalues_schur(M)
+        
     elseif method in [:tropical]
-        return simultaneous_eigenvalues_tropical(inputM)
+        return simultaneous_eigenvalues_tropical(M)
+        
     elseif method in [:power]
-        return simultaneous_eigenvalues_power(inputM)
+        return simultaneous_eigenvalues_power(M)
     else
         @error "method = $method is not recognized by simultaneous_eigenvalues."
     end
-
 end
 
-function simultaneous_eigenvalues_power(inputM)
+function simultaneous_eigenvalues_power(M::Vector)
     
-    M = [matrix(A) for A in inputM]
     Qp = base_ring(M[1])
     Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
@@ -147,9 +147,8 @@ INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
 Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 """
 
-function simultaneous_eigenvalues_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem)
+function simultaneous_eigenvalues_schur(M::Vector)
     
-    M = [matrix(A) for A in inputM]
     Qp = base_ring(M[1])
     Mrand = sum(A * rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
@@ -195,23 +194,13 @@ elt_info(x) = (iszero(x), valuation(x), precision(x))
 
     
 # TODO: Move to Dory?
-function simultaneous_eigenvalues_tropical(inputM)
+function simultaneous_eigenvalues_tropical(M::Vector)
 
-    # Assume that the first input matrix is well-conditioned.
-    I0 = inv(matrix(inputM[1]))
-
-    # Use the first operator to cancel out the weird change of basis from the truncated
-    # normal form approach.
-    #
-    # TODO: Move to the actual solver. Also, is this really necessary?
-    M = [I0 * matrix(A) for A in inputM]
+    # Basic setup
     Qp = base_ring(M[1])
     n = size(M[1], 1)
     base_zero = zero(Qp)
-    
-    ########################################
-    # Simultaneous diagonalization.
-    
+
     # Setup containers
     # We also consider `V` to be one of the allocated containers.
     V = Dory.identity_matrix(Qp, n)
@@ -228,7 +217,7 @@ function simultaneous_eigenvalues_tropical(inputM)
     
     for i = 2:length(M)
         
-        @info "ROUND $i"
+        #@info "ROUND $i"
 
         # We want to perturb the original matrix a little to ensure that the blocks
         # detected in previous iterations stay intact.

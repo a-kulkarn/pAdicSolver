@@ -204,8 +204,23 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = :
     # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
     #       where B is some change of basis matrix.
     #
+    # TODO: Does it?
+    #
     # Dispatch on the method argument.
     M = _multiplication_matrices(Val(method), P, is_homogeneous; kwds...)
+
+    # Normalize the multiplication matrices.
+    # We assume that the first multiplication matrix is well-conditioned.
+    I0 = inv(matrix(M[1]))
+
+    # Use the first operator to cancel out the weird change of basis from the truncated
+    # normal form approach.
+    #
+    # TODO: Is this really necessary?
+    M = [I0 * matrix(A) for A in M]
+    
+    ########################################
+    # Simultaneous diagonalization.
 
     # Apply the Eigenvector method.
     @vtime :padic_solver Xi = simultaneous_eigenvalues(M, method = eigenvector_method)
