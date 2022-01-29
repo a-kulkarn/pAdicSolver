@@ -112,11 +112,11 @@ function simultaneous_eigenvalues_power(inputM)
     # We will assume that M[1] is well-conditioned. for now.
     
     # The rectangular solve step is enough to kill off any helpful data mod p.
-    @vtime :padic_solver 2 I0 = rectangular_solve(M[1], identity_matrix(Mrand.base_ring,size(M[1],1)))
+    @vtime :padic_solver 2 I0 = rectangular_solve(M[1], identity_matrix(Mrand.base_ring, size(M[1],1)))
     @vtime :padic_solver 2 Mg = I0 * Mrand
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-    eigen_subspaces  = eigspaces(Mg, method=method)
+    eigen_subspaces  = eigspaces(Mg, method="power")
     
     #println("eigvalues: ", invariant_subspaces.values)
     #println()
@@ -128,41 +128,16 @@ function simultaneous_eigenvalues_power(inputM)
         for i in 1:length(eigen_subspaces.spaces)
             
             V = eigen_subspaces.spaces[i]            
-            Y = rectangular_solve(V,I0*M[j]*V)           
+            Y = rectangular_solve(V, I0 * M[j] * V)           
             X[i,j] = trace(Y)/Qp(size(Y,2))
         end
     end
-
-    function normalize_solution!(Xi, ish)
-        Sol = Xi
-        
-        if !ish
-            i=1            
-            while i <= size(Sol,1)
-                scale_factor = Sol[i,1]
-                if iszero(scale_factor)
-                    println()
-                    println("!-- Ignoring solution at infinity --!")
-                    println()
-                    
-                    Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
-                else
-                    Sol[i,:] *= inv(scale_factor)
-                    i+=1
-                end
-            end
-        #else
-            # do nothing otherwise, for now.
-        end
-        return Sol
-    end
     
-    return normalize_solution!(X, ish)
+    return X
 end
 
 @doc Markdown.doc"""
-    nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
-            --> eigenvalue_matrix :: Hecke.Generic.MatElem{T}
+    simultaneous_eigenvalues_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem)
 
 (Internal function) Compute the eigenvalues of a list of commuting matrices, given as an array. In the
 specific case that the matrices are mult-by-coordinate-variable operators on R/I. The method attempts to
