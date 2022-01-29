@@ -203,10 +203,6 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = :
     
     # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
     #       where B is some change of basis matrix.
-    #
-    # TODO: Does it?
-    #
-    # Dispatch on the method argument.
     M = _multiplication_matrices(Val(method), P, is_homogeneous; kwds...)
 
     # Normalize the multiplication matrices.
@@ -215,21 +211,14 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = :
 
     # Use the first operator to cancel out the weird change of basis from the truncated
     # normal form approach.
-    #
-    # TODO: Is this really necessary?
     M = [I0 * matrix(A) for A in M]
     
-    ########################################
     # Simultaneous diagonalization.
-
-    # Apply the Eigenvector method.
     @vtime :padic_solver Xi = simultaneous_eigenvalues(M, method = eigenvector_method)
     
     # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
-    
-    if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end
-    
+    if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end    
 end
 
 # function _solver_engine(P, is_homogeneous; eigenvector_method = "power", kwds...)
@@ -265,7 +254,7 @@ INPUTS:
 - P        -- polynomial system, a Vector of AbstractAlgebra polynomials.
 - rho      -- monomial degree of the system. Default is the macaulay degree.
 """
-function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous;
+function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous::Bool;
                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
                         test_mode :: Bool = false)
 
@@ -318,7 +307,8 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
     return M
 end
 
-function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous; ordering=ordering(P))
+function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous::Bool;
+                                  ordering=ordering(P))
 
     the_ring = parent(P[1])
     K = base_ring(the_ring)
@@ -349,38 +339,38 @@ function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Gener
     return M 
 end
 
-# TODO: XXX: This function should replace the previous version if it tests well.
-function _multiplication_matrices_II(method::Val{:tnf}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous;
-                        rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
-                        test_mode :: Bool = false )
-    # Start the clock.
-    t0 = time()
+# TODO: This function should replace the previous version if it tests well.
+# function _multiplication_matrices_II(method::Val{:tnf}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous;
+#                         rho :: Integer =  sum(total_degree(P[i])-1 for i in 1:length(P)) + 1,
+#                         test_mode :: Bool = false )
+#     # Start the clock.
+#     t0 = time()
 
-    # This solve function could be made to work with polynomials with FlintRR coefficients
-    # as well, though this requires managing the type dispatch a bit and remodeling the
-    # old DynamicPolynomials based subfunctions.
+#     # This solve function could be made to work with polynomials with FlintRR coefficients
+#     # as well, though this requires managing the type dispatch a bit and remodeling the
+#     # old DynamicPolynomials based subfunctions.
     
-    the_ring = parent(P[1])
-    X = gens(the_ring)
+#     the_ring = parent(P[1])
+#     X = gens(the_ring)
 
-    # Compute the truncated normal form
-    #
-    # Return the map N, together with
-    # the sets of monomials (V,B), with N|B the identity.
+#     # Compute the truncated normal form
+#     #
+#     # Return the map N, together with
+#     # the sets of monomials (V,B), with N|B the identity.
 
-    N, L, L0 = truncated_normal_form_map(P, is_homogeneous, rho=rho, verbose=verbose)
+#     N, L, L0 = truncated_normal_form_map(P, is_homogeneous, rho=rho, verbose=verbose)
 
-    @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
-    @vprint :padic_solver "-- Null space $size(N,1) x $size(N,2)  $(time()-t0) (s)"
+#     @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
+#     @vprint :padic_solver "-- Null space $size(N,1) x $size(N,2)  $(time()-t0) (s)"
     
-    t0 = time()
-    Nr, B = truncated_normal_form_section(N, L, L0, is_homogeneous)
+#     t0 = time()
+#     Nr, B = truncated_normal_form_section(N, L, L0, is_homogeneous)
    
-    @vprint :padic_solver "-- Qr basis $length(B)   $(time()-t0) (s)"
+#     @vprint :padic_solver "-- Qr basis $length(B)   $(time()-t0) (s)"
 
-    @vtime :padic_solver M = mult_matrices(B, X, Nr, L, is_homogeneous)
-    return M
-end
+#     @vtime :padic_solver M = mult_matrices(B, X, Nr, L, is_homogeneous)
+#     return M
+# end
 
 ######################################################################################################
 #
@@ -526,6 +516,7 @@ end
 #     return Singular.reduce(f, I)
 # end
 
+# TODO: Move to Dory
 import Base.rem
 function rem(f::Hecke.Generic.MPolyElem{T}, P::Array{<:Hecke.Generic.MPolyElem{T},1}) where T
     return divrem(f,P)[2]
