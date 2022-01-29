@@ -166,160 +166,214 @@ function simultaneous_eigenvalues_schur(inputM :: Array{Array{T,2},1} where T <:
     #println()
     #println("eigspaces: ", length(invariant_subspaces.spaces))
 
-    if method != "tropical"
-
-        Mg = I0 * (M[2] + M[3] + M[5] + M[6])
+    Mg = I0 * (M[2] + M[3] + M[5] + M[6])
         
-        # eigenvectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-        X, V = Dory.block_schur_form(Mg)
+    # eigenvectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
+    X, V = Dory.block_schur_form(Mg)
         
-        sol_array = Array{Array{padic,1},1}()
-        for j in 1:length(M)
+    sol_array = Array{Array{padic,1},1}()
+    for j in 1:length(M)
 
-            # Put the other matrix into schur form
-            Y = inv(V)*(I0*M[j])*V
-            
-            for i=1:size(X,2)
-                if (i == 1 && iszero(X[i, i+1])) ||
-                    (i==size(X, 2) && iszero(X[i-1, i])) ||
-                    (iszero(X[i, i-1]) && iszero(X[i+1, i]))
-                    
-                    push!(sol_array[j], Y[i,i])
-                end
+        # Put the other matrix into schur form
+        Y = inv(V)*(I0*M[j])*V
+        
+        for i=1:size(X,2)
+            if (i == 1 && iszero(X[i, i+1])) ||
+                (i==size(X, 2) && iszero(X[i-1, i])) ||
+                (iszero(X[i, i-1]) && iszero(X[i+1, i]))
+                
+                push!(sol_array[j], Y[i,i])
             end
         end
-        return normalize_solution(Xi, ish)
     end
-
-    if method == "tropical"
-
-        Mg = I0 * M[2]
-        
-        
-        # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-        X, V = Dory.block_schur_form(Mg, shift=tropical_shift)
-        
-        sol_array = Array{Array{Number,1},1}()
-        #display(valuation.(X))
-        
-        for j in 1:length(M)
-
-            # Put the other matrix into schur form
-            ycoords = Array{Number,1}()
-            Y = V * (I0 * M[j]) * inv(V)
-            block_start_index = 1
-
-            #display(valuation.(Y))
-            
-            for i=1:size(X,2)
-                if (i == size(X,2) || iszero(X[i+1, i]))
-                    
-                    block_inds = block_start_index:i
-                    block = Y[block_inds, block_inds]
-
-                    sing_vals = singular_values(block)
-
-                    @info valuation.(sing_vals)
-                    
-                    # In any particular block, the valuations of the eigenvalues are equal.
-                    # We need to check if the block has a kernel, as a special default value needs to be assigned.
-                    if zero(Qp) in sing_vals
-                        val_of_eigenvalues = DEFAULT_VALUATION_OF_ZERO
-                    else
-                        sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
-                        val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
-                    end
-                    
-                    push!(ycoords, [val_of_eigenvalues for r in block_inds]...)
-                    block_start_index = i+1
-                end                
-            end
-            push!(sol_array, ycoords)
-        end
-
-        if ish
-            error("Tropical mode not implemented for projective systems.")
-        end
-        #return hcat( sol_array[2:length(sol_array)]...)
-        return hcat(sol_array...)
-    end
-    
-    function normalize_solution!(Xi, ish)
-        Sol = Xi
-        
-        if (!ish)
-            i=1            
-            while i <= size(Sol,1)
-                scale_factor = Sol[i,1]
-                if iszero(scale_factor)
-                    println()
-                    println("!-- Ignoring solution at infinity --!")
-                    println()
-                    
-                    Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
-                else
-                    Sol[i,:] *= inv(scale_factor)
-                    i+=1
-                end
-            end
-        #else
-            # do nothing otherwise, for now.
-        end
-        return Sol
-    end
-    
-    return normalize_solution!(X, ish)
-    
+    return hcat(sol_array...)
 end
 
 
-function tropical_nse(inputM)
-    
-    M = [matrix(A) for A in inputM]
-    Qp = base_ring(M[1])
+# Function to extract information from a local field element.
+elt_info(x) = (iszero(x), valuation(x), precision(x))
 
-    # The rectangular solve step is enough to kill off any helpful data mod p.
-    I0 = inv(M[1])
+    
+# TODO: Move to Dory?
+function simultaneous_eigenvalues_tropical(inputM)
+
+    # Assume that the first input matrix is well-conditioned.
+    I0 = inv(matrix(inputM[1]))
+
+    # Use the first operator to cancel out the weird change of basis from the truncated
+    # normal form approach.
+    #
+    # TODO: Move to the actual solver. Also, is this really necessary?
+    M = [I0 * matrix(A) for A in inputM]
+    Qp = base_ring(M[1])
+    n = size(M[1], 1)
+    base_zero = zero(Qp)
     
     ########################################
     # Simultaneous diagonalization.
-
-    X, V = Dory.block_schur_form(I0 * M[2], shift=tropical_shift)
-
-    # Setup containers
-    B = X
-    C = deepcopy(X)
-    zero_mat = zero_matrix(Qp, size(B,1), size(B, 2))
     
-    for A in M[3:length(M)]
-        B = mul!(B, I0, A)
+    # Setup containers
+    # We also consider `V` to be one of the allocated containers.
+    V = Dory.identity_matrix(Qp, n)
+    B = deepcopy(V)
+    C = deepcopy(V)
+    zero_mat = zero_matrix(Qp, n, n)
+    boolean_mats = [iszero.(A) for A in M]
+    
+    # Enforce good memory structure
+    @assert !Dory._has_any_shared_refs(V)
 
-        # Compute B = V * B * inv(B)
-        B = let
-            C = mul!(C, V, B)
-            mul!(B, C, inv(V))
+    # Setup structure for recording blocks.
+    block_ranges = [1:n]
+    
+    for i = 2:length(M)
+        
+        @info "ROUND $i"
+
+        # We want to perturb the original matrix a little to ensure that the blocks
+        # detected in previous iterations stay intact.
+        B = add!(B, M[i], zero_mat)
+        
+        # Set entries in the columns block_start:block_end under the diagonal block to zero.
+        for block_ran in block_ranges
+            for i = last(block_ran)+1:n
+                for j = block_ran
+                    B[i,j] = zero!(B[i,j])
+                end
+            end
         end
         
-        X, Vi = Dory.block_schur_form(B, shift=tropical_shift)
+        @info "Input of Block Schur Form:" elt_info.(B)
+        X, Vi = Dory.block_schur_form(B, shift=tropical_shift, iter_bound=(m,N)->100)
+        @info "Output of Block Schur Form:" elt_info.(X)
+        
+        #@info "Output of Block Schur Form:" elt_info.(X)
+        #@info "Transform:" elt_info.(V)
+        #@info "Inverse precision" precision.(inv(V))
 
-        # Compute V = Vi * V
-        B = mul!(B, Vi, V)
-        V = add!(V, B, zero_mat)
+        # Update all the matrices
+        for j=1:length(M)
+            # Compute B = V * M[i] * inv(V)
+            M[j] = let
+                C = Hecke.mul!(C, Vi, M[j])
+                Hecke.mul!(M[j], C, inv(Vi))
+            end
+        end
+
+        # Update the predicted blocks up to pnumerical tolerance.
+
+        # Broadcast isapprox to create boolean matrices.
+        for j=1:length(M)
+            A = M[j]
+            norm_val = Dory.norm_valuation(A)
+            min_prec = minimum(precision.(A))
+
+            # NOTE: We need zero entries to show up as zero bits for the block form check.
+            tol_check = x->!Dory.isapprox_zero(x, valuation_atol = min(norm_val, 0) + min_prec)
+            boolean_mats[j] = tol_check.(A)
+
+            if false && j == i
+                @info " " norm_val min_prec
+                @info " " elt_info.(A)
+                @info boolean_mats[j]
+            end
+
+        end
+        
+        # Detect the block ranges
+        all_block_ranges = [Dory.diagonal_block_ranges(A) for A in boolean_mats]
+
+        @info " " all_block_ranges
+        
+        # Refine the list of ranges.
+
+        block_ranges = let
+            temp = Vector{UnitRange{Int}}()
+            for rangs in all_block_ranges
+                for r in rangs
+                    if !any(issubset(r, S) for S in temp)
+                        filter!(S->!issubset(S, r), temp)
+                        push!(temp, r)
+                    end
+                end
+            end
+            temp
+        end
+
+        @info " " block_ranges
+        
+        # Update V = Vi * V
+        C = Hecke.mul!(C, Vi, V)
+        V, C = C, V
+
+        for j = 1:length(M)
+            #i == j && @info  "Round $(i),  Matrix $(j):" elt_info.(M[j])
+        end 
+        
     end
 
     ## Cache the inverse
     IV = inv(V)
+
+    ## Choose some value of X
+    #
+    # TODO: XXX: Actually compute the block values correctly
+    X = M[6]
     
     ########################################
     # Extract eigenvalues after simultaneous diagonalization.
+
+    @info "EXTRACTING EIGENVALUES..."
+
+    sol_array = Matrix{BigInt}(undef, n, length(M))
+
+    for j = 1:length(M)
+        for ran in block_ranges
+            block = M[j][ran, ran]            
+            sing_vals = singular_values(block)
+
+            #@info valuation.(sing_vals)
+            
+            # In any particular block, the valuations of the eigenvalues are equal.
+            # We need to check if the block has a kernel, as a special default value needs to be assigned.
+            # if zero(Qp) in sing_vals
+            #     val_of_eigenvalues = DEFAULT_VALUATION_OF_ZERO
+            # else
+            #     sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
+            #     val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
+            # end
+
+            # If zero is in the singular values, leave the entries undefined.
+            if !(zero(Qp) in sing_vals)
+                sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
+                val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
+
+                # Populate the solution array
+                for i in ran
+                    sol_array[i,j] = val_of_eigenvalues
+                end
+            end
+            
+        end
+    end
+    
+
+    return sol_array
+
+    ####################
+    # Junk (Hopefully)
+    
     sol_array = Array{Array{Number,1},1}()
     for j in 1:length(M)
 
         # Put the other matrix into schur form
         ycoords = Array{Number,1}()
-        Y = V * (I0 * M[j]) * IV
+        #Y = V * M[j] * IV
+        Y = M[j]
         block_start_index = 1
 
+        #@info  "Matrix $(j):" elt_info.(Y)
+        
         for i=1:size(X,2)
             if (i == size(X,2) || iszero(X[i+1, i]))
                 
