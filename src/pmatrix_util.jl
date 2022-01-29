@@ -232,9 +232,9 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             end
         end
         
-        @info "Input of Block Schur Form:" elt_info.(B)
+        #@info "Input of Block Schur Form:" elt_info.(B)
         X, Vi = Dory.block_schur_form(B, shift=tropical_shift, iter_bound=(m,N)->100)
-        @info "Output of Block Schur Form:" elt_info.(X)
+        #@info "Output of Block Schur Form:" elt_info.(X)
         
         #@info "Output of Block Schur Form:" elt_info.(X)
         #@info "Transform:" elt_info.(V)
@@ -268,14 +268,9 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             end
 
         end
-        
-        # Detect the block ranges
+
+        # Refine the list of ranges based on common blocks post-change of coordinates.
         all_block_ranges = [Dory.diagonal_block_ranges(A) for A in boolean_mats]
-
-        @info " " all_block_ranges
-        
-        # Refine the list of ranges.
-
         block_ranges = let
             temp = Vector{UnitRange{Int}}()
             for rangs in all_block_ranges
@@ -289,33 +284,21 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             temp
         end
 
-        @info " " block_ranges
-        
         # Update V = Vi * V
         C = Hecke.mul!(C, Vi, V)
         V, C = C, V
 
-        for j = 1:length(M)
+        #for j = 1:length(M)
             #i == j && @info  "Round $(i),  Matrix $(j):" elt_info.(M[j])
-        end 
-        
+        #end         
     end
 
-    ## Cache the inverse
-    IV = inv(V)
-
-    ## Choose some value of X
-    #
-    # TODO: XXX: Actually compute the block values correctly
-    X = M[6]
     
     ########################################
     # Extract eigenvalues after simultaneous diagonalization.
 
-    @info "EXTRACTING EIGENVALUES..."
-
-    sol_array = Matrix{BigInt}(undef, n, length(M))
-
+    sol_array = Matrix{Rational{BigInt}}(undef, n, length(M))
+    
     for j = 1:length(M)
         for ran in block_ranges
             block = M[j][ran, ran]            
@@ -346,49 +329,48 @@ function simultaneous_eigenvalues_tropical(M::Vector)
         end
     end
     
-
     return sol_array
 
     ####################
     # Junk (Hopefully)
     
-    sol_array = Array{Array{Number,1},1}()
-    for j in 1:length(M)
+    # sol_array = Array{Array{Number,1},1}()
+    # for j in 1:length(M)
 
-        # Put the other matrix into schur form
-        ycoords = Array{Number,1}()
-        #Y = V * M[j] * IV
-        Y = M[j]
-        block_start_index = 1
+    #     # Put the other matrix into schur form
+    #     ycoords = Array{Number,1}()
+    #     #Y = V * M[j] * IV
+    #     Y = M[j]
+    #     block_start_index = 1
 
-        #@info  "Matrix $(j):" elt_info.(Y)
+    #     #@info  "Matrix $(j):" elt_info.(Y)
         
-        for i=1:size(X,2)
-            if (i == size(X,2) || iszero(X[i+1, i]))
+    #     for i=1:size(X,2)
+    #         if (i == size(X,2) || iszero(X[i+1, i]))
                 
-                block_inds = block_start_index:i
-                block = Y[block_inds, block_inds]
+    #             block_inds = block_start_index:i
+    #             block = Y[block_inds, block_inds]
 
-                sing_vals = singular_values(block)
+    #             sing_vals = singular_values(block)
 
-                #@info valuation.(sing_vals)
+    #             #@info valuation.(sing_vals)
                 
-                # In any particular block, the valuations of the eigenvalues are equal.
-                # We need to check if the block has a kernel, as a special default value needs to be assigned.
-                if zero(Qp) in sing_vals
-                    val_of_eigenvalues = DEFAULT_VALUATION_OF_ZERO
-                else
-                    sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
-                    val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
-                end
+    #             # In any particular block, the valuations of the eigenvalues are equal.
+    #             # We need to check if the block has a kernel, as a special default value needs to be assigned.
+    #             if zero(Qp) in sing_vals
+    #                 val_of_eigenvalues = DEFAULT_VALUATION_OF_ZERO
+    #             else
+    #                 sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
+    #                 val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
+    #             end
                 
-                push!(ycoords, [val_of_eigenvalues for r in block_inds]...)
-                block_start_index = i+1
-            end                
-        end
-        push!(sol_array, ycoords)
-    end
+    #             push!(ycoords, [val_of_eigenvalues for r in block_inds]...)
+    #             block_start_index = i+1
+    #         end                
+    #     end
+    #     push!(sol_array, ycoords)
+    # end
 
-    return hcat(sol_array...)
+    # return hcat(sol_array...)
 end
 
