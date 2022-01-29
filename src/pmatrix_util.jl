@@ -317,7 +317,7 @@ function simultaneous_eigenvalues_tropical(M::Vector)
 
             # If zero is in the singular values, leave the entries undefined.
             if !(zero(Qp) in sing_vals)
-                sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
+                sing_val_sizes = [Rational{BigInt}(valuation(x)) for x in sing_vals]
                 val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
 
                 # Populate the solution array
