@@ -1,12 +1,12 @@
 
 
-R, (x1, x2, x3, x4, x5) = PolynomialRing(QQ, 5)
+R, (x1, x2, x3, x4, x5) = Hecke.PolynomialRing(Hecke.QQ, 5)
 #S, (x1, x2, x3, x4, x5) = PolynomialRing(QQ, 5, ordering=:degrevlex)
 #R, (x4, x5) = PolynomialRing(QQ, 5)
 
 p = 1000003
 N = 15
-K = PadicField(p, N)
+K = Hecke.PadicField(p, N)
 
 GB = [2*x3 - 39000117*x4 + 5*x5,
       1000003*x2 - 1,
@@ -17,7 +17,7 @@ GB = [2*x3 - 39000117*x4 + 5*x5,
 
 
 #steve = f->pAdicSolver.change_parent(S, f)
-curry = f->change_base_ring(K,f)
+curry = f->Hecke.change_base_ring(K,f)
 
 
 #pAdicSolver.solve_affine_groebner_system(curry.(GB), curry.(lp))
@@ -37,4 +37,9 @@ end
 
 M = pAdicSolver._multiplication_matrices(Val(:given_GB), curry.(GB), false, ordering=:degrevlex)
 
+sol = pAdicSolver.simultaneous_eigenvalues(M, method=:tropical)
+
+@info " " sol
+
+@test true
 nothing

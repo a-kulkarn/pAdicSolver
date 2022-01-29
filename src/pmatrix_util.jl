@@ -24,6 +24,39 @@ struct QRPadicArrayPivoted
     p::Array{Int64,1}
 end
 
+
+######################################################################################################
+#
+#  Normalize solutions(?)
+#
+######################################################################################################
+
+# Why did Bernard need this step? It seems totally pointless...
+# function normalize_solution!(Xi, ish)
+#     Sol = Xi
+    
+#     if !ish
+#         i=1            
+#         while i <= size(Sol,1)
+#             scale_factor = Sol[i,1]
+#             if iszero(scale_factor)
+#                 println()
+#                 println("!-- Ignoring solution at infinity --!")
+#                 println()
+                
+#                 Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
+#             else
+#                 Sol[i,:] *= inv(scale_factor)
+#                 i+=1
+#             end
+#         end
+#         #else
+#         # do nothing otherwise, for now.
+#     end
+#     return Sol
+# end
+
+
 ######################################################################################################
 #
 #  Tropical shifting choices in QR iteration
@@ -44,7 +77,7 @@ end
 
 
 @doc Markdown.doc"""
-    normalized_simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
+    simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
             --> eigenvalue_matrix :: Hecke.Generic.MatElem{T}
 
 (Internal function) Compute the eigenvalues of a list of commuting matrices, given as an array. In the
@@ -53,11 +86,21 @@ specific case that the matrices are mult-by-coordinate-variable operators on R/I
 INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
 Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 """
-function normalized_simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
+function simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem; method=:schur)
 
-    if method == "schur" || method == "qr" || method == "tropical"
-        return nse_schur(inputM, ish, method)
+    if method in [:schur, :qr]
+        return simultaneous_eigenvalues_schur(inputM)
+    elseif method in [:tropical]
+        return simultaneous_eigenvalues_tropical(inputM)
+    elseif method in [:power]
+        return simultaneous_eigenvalues_power(inputM)
+    else
+        @error "method = $method is not recognized by simultaneous_eigenvalues."
     end
+
+end
+
+function simultaneous_eigenvalues_power(inputM)
     
     M = [matrix(A) for A in inputM]
     Qp = base_ring(M[1])
@@ -129,7 +172,7 @@ INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
 Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 """
 
-function nse_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
+function simultaneous_eigenvalues_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem)
     
     M = [matrix(A) for A in inputM]
     Qp = base_ring(M[1])

@@ -199,7 +199,7 @@ end
 ######################################################################################################
 
 
-function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = "power", kwds...)
+function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = :power, kwds...)
     
     # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
     #       where B is some change of basis matrix.
@@ -208,7 +208,7 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = "
     M = _multiplication_matrices(Val(method), P, is_homogeneous; kwds...)
 
     # Apply the Eigenvector method.
-    @vtime :padic_solver Xi = normalized_simultaneous_eigenvalues(M, is_homogeneous, eigenvector_method)
+    @vtime :padic_solver Xi = simultaneous_eigenvalues(M, method = eigenvector_method)
     
     # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.

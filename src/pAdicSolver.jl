@@ -27,6 +27,7 @@ module pAdicSolver
 #
 ###############################################################
 
+
 function __init__()
     # Attach the necessary verbose scopes to Hecke's global dicitionary.
     Hecke.add_verbose_scope(:padic_solver)
