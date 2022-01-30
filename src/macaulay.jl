@@ -441,7 +441,7 @@ end
 #             L[missing_mons[i]] = i
 #         end
         
-#         # TODO: When AbstractAlgebra finally implements diagonal joining, use that.
+#         # TODO: Use AbstractAlgebra.diagonal_matrix to diagonal join.
 #         #
 #         # Update matrices via a diagonal join.
 #         newN = zero_matrix(K, missing_count + size(N,1), missing_count + size(N,2))

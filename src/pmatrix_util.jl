@@ -106,7 +106,7 @@ function simultaneous_eigenvalues_power(M::Vector)
     Qp = base_ring(M[1])
     Mg = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
-    # TODO: Check well-conditionedness of Mg
+    # TODO: Check well-conditionedness of eigenvalue problem for Mg
     
     @vprint :padic_solver 2 "Valuations of singular values:"
     @vprint :padic_solver 2 valuation.(singular_values(M[1]))
