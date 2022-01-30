@@ -203,15 +203,30 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = :
     
     # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
     #       where B is some change of basis matrix.
-    M = _multiplication_matrices(Val(method), P, is_homogeneous; kwds...)
+    Mentries = _multiplication_matrices(Val(method), P, is_homogeneous; kwds...)
+    M = [matrix(A) for A in Mentries]
 
     # Normalize the multiplication matrices.
-    # We assume that the first multiplication matrix is well-conditioned.
-    I0 = inv(matrix(M[1]))
+    I0 = try
+        # The first multiplication matrix is usually well-conditioned.
+        inv(M[1])
+    catch e
+        !isa(e, Dory.InconsistentSystemError) && throw(e)
+        rand_combo = sum(Dory.rand_padic_int(parent(M[1][1,1])) * M[j] for j=1:length(M))
+
+        # Try to invert one more time with a random linear combination, and if it fails,
+        # there is a lack of precision to solve the polynomial system.
+        try
+            inv(rand_combo)
+        catch e
+            !isa(e, Dory.InconsistentSystemError) && throw(e)
+            throw(Dory.InsufficientPrecisionError())
+        end
+    end
 
     # Use the first operator to cancel out the weird change of basis from the truncated
     # normal form approach.
-    M = [I0 * matrix(A) for A in M]
+    M = [I0 * A for A in M]
     
     # Simultaneous diagonalization.
     @vtime :padic_solver Xi = simultaneous_eigenvalues(M, method = eigenvector_method)
@@ -264,6 +279,19 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
     msg = string("-- Null space ", size(N,1), " x ", size(N,2), "   ", time()-t0, " (s)\n"); t0 = time()
     @vprint :padic_solver msg
 
+
+    missing_monomials = let
+        if is_homogeneous
+            np1 = length(X)
+        else
+            np1 = length(X)+1
+        end
+        !(length(L) == binomial(rho + np1 - 1, rho))
+    end
+
+    # TODO: In theory this causes a bug. 
+    @assert !missing_monomials
+    
     # The idea of the QR step is two-fold:
     # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
     #    set (here, IdL0).
