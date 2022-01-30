@@ -178,7 +178,7 @@ end
 function mult_matrices(B, X, K, L, ish = false)
 
     # For an affine system, '1' is needed as a monomial as well.
-    if !ish Y = vcat([parent(X[1])(1)],X) else Y = X end
+    if !ish Y = vcat([parent(X[1])(1)], X) else Y = X end
     
     function construct_monomial_mult_matrix(v)
         M = fill(eltype(K)(0), length(B), size(K,2))

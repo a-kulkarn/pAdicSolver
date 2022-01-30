@@ -2,7 +2,6 @@
 
 @testset "Tropical solver tests (part 2)" begin
 
-
     p = 1000003
     N = 15
     K = Hecke.PadicField(p, N)

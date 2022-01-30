@@ -221,23 +221,6 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = :
     if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end    
 end
 
-# function _solver_engine(P, is_homogeneous; eigenvector_method = "power", kwds...)
-    
-#     # NOTE: The first "multiplication matrix" either corrsponds to the operator [x0]B, or to [1]B,
-#     #       where B is some change of basis matrix.
-#     #
-#     # Dispatch on the method argument.
-#     M = _multiplication_matrices(Val(:given_GB), P, is_homogeneous, leading_mons_of_P; kwds...)
-
-#     # Apply the Eigenvector method.
-#     @vtime :padic_solver Xi = normalized_simultaneous_eigenvalues(M, is_homogeneous, eigenvector_method)
-    
-#     # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
-#     # not correspond to a coordinate.
-    
-#     if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end
-    
-# end
 
 
 @doc Markdown.doc"""
@@ -516,6 +499,12 @@ end
 #     return Singular.reduce(f, I)
 # end
 
+######################################################################################################
+#
+#  Polynomial methods
+#
+######################################################################################################
+
 # TODO: Move to Dory
 import Base.rem
 function rem(f::Hecke.Generic.MPolyElem{T}, P::Array{<:Hecke.Generic.MPolyElem{T},1}) where T
@@ -568,39 +557,6 @@ function kbase(P, ish)
     divisible_by_LP_elt = f->any(iszero(rem(f, lp)) for lp in LP)
     return filter(!divisible_by_LP_elt, mons)
 end
-
-
-######################################################################################################
-# 
-#  Oscar Dependency
-#
-######################################################################################################
-
-# @doc Markdown.doc"""
-#     Given a list of polynomials `P`, which is a Groebner basis for some ideal,
-#     as well as the list of leading monomials LP, construct the generators for the quotient
-#     ring `K[x]/P` as a K-vector space 
-# """
-# function kbase_from_GB(P, LP)
-
-#     isempty(P) && @error "Input list of polynomials must not be empty."
-    
-#     R = parent(P[1])
-
-#     for m in monomials_of_degree
-        
-#     end
-        
-#     @error "Not implemented."
-# end
-    
-# function kbase_from_GB(I)
-#     Oscar.singular_assure(I)
-#     sI = I.gens.S
-#     sI.isGB = true
-
-#     return sing_kbase = Oscar.Singular.kbase(sI)
-# end
 
 
 ######################################################################################################
