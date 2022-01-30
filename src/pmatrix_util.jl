@@ -104,16 +104,12 @@ end
 function simultaneous_eigenvalues_power(M::Vector)
     
     Qp = base_ring(M[1])
-    Mrand = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
+    Mg = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
+    # TODO: Check well-conditionedness of Mg
+    
     @vprint :padic_solver 2 "Valuations of singular values:"
     @vprint :padic_solver 2 valuation.(singular_values(M[1]))
-
-    # We will assume that M[1] is well-conditioned. for now.
-    
-    # The rectangular solve step is enough to kill off any helpful data mod p.
-    @vtime :padic_solver 2 I0 = rectangular_solve(M[1], identity_matrix(Mrand.base_ring, size(M[1],1)))
-    @vtime :padic_solver 2 Mg = I0 * Mrand
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     eigen_subspaces  = eigspaces(Mg, method="power")
@@ -128,7 +124,7 @@ function simultaneous_eigenvalues_power(M::Vector)
         for i in 1:length(eigen_subspaces.spaces)
             
             V = eigen_subspaces.spaces[i]            
-            Y = rectangular_solve(V, I0 * M[j] * V)           
+            Y = rectangular_solve(V, M[j] * V)           
             X[i,j] = trace(Y)/Qp(size(Y,2))
         end
     end
@@ -192,7 +188,7 @@ end
 # Function to extract information from a local field element.
 elt_info(x) = (iszero(x), valuation(x), precision(x))
 
-    
+
 # TODO: Move to Dory?
 function simultaneous_eigenvalues_tropical(M::Vector)
 
@@ -297,35 +293,37 @@ function simultaneous_eigenvalues_tropical(M::Vector)
     ########################################
     # Extract eigenvalues after simultaneous diagonalization.
 
-    sol_array = Matrix{Rational{BigInt}}(undef, n, length(M))
+    # Initialize the solution array.
+    # sol_array = Hecke.MatrixSpace(Hecke.QQ, n, length(M))()
+
+    sol_array = Matrix{TropicalInterval}(undef, n, length(M))
     
     for j = 1:length(M)
         for ran in block_ranges
             block = M[j][ran, ran]            
             sing_vals = singular_values(block)
 
+            # NOTE: It might be faster to look at traces of powers of the matrix and use Newton's identities.
+            
             #@info valuation.(sing_vals)
             
             # In any particular block, the valuations of the eigenvalues are equal.
             # We need to check if the block has a kernel, as a special default value needs to be assigned.
-            # if zero(Qp) in sing_vals
-            #     val_of_eigenvalues = DEFAULT_VALUATION_OF_ZERO
-            # else
-            #     sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
-            #     val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
-            # end
 
-            # If zero is in the singular values, leave the entries undefined.
-            if !(zero(Qp) in sing_vals)
-                sing_val_sizes = [Rational{BigInt}(valuation(x)) for x in sing_vals]
+
+            if zero(Qp) in sing_vals
+                val_of_eigenvalues = fmpq(precision(Qp))
+                sol_interval = TropicalInterval(val_of_eigenvalues, Inf)
+            else
+                sing_val_sizes = (fmpq(valuation(x)) for x in sing_vals)
                 val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
-
-                # Populate the solution array
-                for i in ran
-                    sol_array[i,j] = val_of_eigenvalues
-                end
+                sol_interval = TropicalInterval(val_of_eigenvalues, val_of_eigenvalues)
             end
-            
+
+            # Populate the solution array
+            for i in ran
+                sol_array[i,j] = sol_interval
+            end
         end
     end
     

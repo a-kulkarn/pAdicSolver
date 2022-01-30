@@ -26,13 +26,39 @@
                0 -1 -1 -1 -1;
                0 -1 0 0 0]
         
-        convert(Matrix{Rational{BigInt}}, mat)
+        fmpq.(mat)
     end
 
     # M = pAdicSolver._multiplication_matrices(Val(:given_GB), curry.(GB), false, ordering=:degrevlex)
     # sol = pAdicSolver.simultaneous_eigenvalues([matrix(A) for A in M], method=:tropical)
 
-    #@info " " sol1 sol2 true_solution
+    #@info " " min.(sol1) min.(sol2)
 
-    @test sol1 == sol2 == true_solution
+    @test min.(sol1) == min.(sol2) == true_solution
+
+
+    Kx,(x1,x2,x3) = PolynomialRing(QQ,3)
+    p = 32003
+    p_adic_precision=29
+    G =  [x2 + p * x3, x1 - p * x3 + 1, 1024128004*x3^2 - 1024224011*x3]
+
+    Qp = PadicField(p,p_adic_precision)
+    Gp = [change_base_ring(Qp,f) for f in G]
+    sol = pAdicSolver.solve_affine_groebner_system(Gp, eigenvector_method=:tropical, ordering=:degrevlex)
+
+    true_solution = let
+        mat = [0  1  0;
+               0 29 29]
+        
+        fmpq.(mat)
+    end
+
+    true_error = let
+        O = fmpq(0)
+        [O 1 O;
+         O Inf Inf]
+    end
+    
+    @test min.(sol) == true_solution
+    @test max.(sol) == true_error
 end

@@ -215,7 +215,7 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = :
     
     # Simultaneous diagonalization.
     @vtime :padic_solver Xi = simultaneous_eigenvalues(M, method = eigenvector_method)
-    
+
     # In the affine system, the distinguished_homogeneizing monomial (i.e, "1" for that case) does 
     # not correspond to a coordinate.
     if is_homogeneous return Xi else return Xi[:, 2:size(Xi,2)] end    
