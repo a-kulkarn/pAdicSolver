@@ -210,53 +210,54 @@ function mult_matrices(B, X, K, L, ish = false)
 end
 
 
-# Function to compute the eigenvalues of a list of (commuting) matrices, normalized
-# by the eigenvalues of the first matrix.
+## Present issues.
+# Performance is not good, and garbage collector runs way too much.
+# bizzare reversal should be made more robust.
+# homogeneity is not handled.
 #
-# INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
-# Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M,
-#          normalized by eigenvalues of the first matrix.
-#          NOTE: The first matrix always represents multiplication-by-"1" or multiplication-by-x0.
-#          for the reason of precision, we choose different normalizations in the affine or
-#          projective cases.
-function normalized_simultaneous_eigenvalues(M :: Array{Array{T,2},1} where T <: Number, ish::Bool)
-    M0 = sum(A*rand() for A in M)
-    #t0=time()
-    I0 = inv(M0)
-    #println("... inv   ", time()-t0, "(s)"); t0=time()
-    Mg = I0*M[1]
+@doc Markdown.doc"""
+    macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
+                      X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
 
-    E  = eigvecs(Mg)
-    #println("... eig   ", time()-t0, "(s)"); t0=time()
-    Z  = E\I0
+Constructs the sparse macaulay matrix defined by the polynomials `P` and degree bound `rho`. The argument `X`
+is a list of variables of the ambient polynomial ring used to construct the multiplier monomials. 
+"""
+function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
+                      X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
 
-    #t0 = time()
-    #F = schurfact(Mg)
-    #println("... schur ", time()-t0, "(s)"); t0=time()
-    # E = F[:vectors]
-    # Z = E'
-
-    X = fill(Complex{Float64}(0.0),size(M0,1),length(M))
-    for j in 1:length(M)
-        Yj = Z*M[j]*E
-        # D = Y\Yj
-        for i in 1:size(M0,1)
-            X[i,j]= Yj[i,i] #(Y[:,i]\Yj[:,i])[1] #D[i,i]
-        end
-    end
-
-    function normalize_solution!(Xi, ish)
-        Sol = Xi
-        if (!ish)
-            for i in 1:size(Sol,1) Sol[i,:]/=Sol[i,1] end
+    degrees = unique!(map(p->total_degree(p),P))
+    monomial_set    = Set{Hecke.Generic.MPoly{T}}()
+    mult_monomials  = Array{Array{Hecke.Generic.MPoly{T}}}(undef, maximum(degrees))
+    
+    for d in degrees
+        if ish
+            mult_monomials[d] = monomials_of_degree(X, rho-d)
         else
-            for i in 1:size(Sol,1) Sol[i,:]/=norm(Sol[i,:]) end
+            mult_monomials[d] = monomials_of_degree(X, 0:rho-d)
         end
-        return Sol
+    end
+    for p in P
+        for m in mult_monomials[total_degree(p)]
+            push!(monomial_set, monomials(m*p)...)
+        end
     end
 
-    return normalize_solution!(X, ish)
+    # The method "isless" is defined in AbstractAlgebra. By default Julia will use this to sort.
+    monomial_set = collect(monomial_set)
+    sort!(monomial_set, rev=true)
+    monomial_dict = Dict(monomial_set[i]=>i for i=1:length(monomial_set))
+
+    # Create sparse rows for each m*p, with m a mulitplier monomial and p a polynomial.
+    R = base_ring(parent(P[1]))    
+    macaulay_matrix = sparse_matrix(R)
+    for p in P
+        for m in mult_monomials[total_degree(p)]
+
+            srow = sparse_row(R, [monomial_dict[mon] for mon in monomials(m*p)],
+                              collect(coefficients(p)))
+            push!(macaulay_matrix, srow)
+        end
+    end
+
+    return macaulay_matrix, monomial_dict
 end
-
-
-

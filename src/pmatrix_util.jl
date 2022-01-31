@@ -147,15 +147,14 @@ function simultaneous_eigenvalues_schur(M::Vector)
     
     Qp = base_ring(M[1])
     Mrand = sum(A * rand_padic_int(Qp) for A in M) # non-unit random causes problems
-
-    Mg = I0 * (M[2] + M[3] + M[5] + M[6])
+    Mg = M[2] + M[3] + M[5] + M[6]
         
     # eigenvectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     X, V = Dory.block_schur_form(Mg)
     simple_blocks = filter(x->length(x)==1, Dory.diagonal_block_ranges(X))
 
     # Allocate and populate
-    sol_array = matrix(Qp, fill(zero(Qp), length(simple_block), length(M)))
+    sol_array = matrix(Qp, fill(zero(Qp), length(simple_blocks), length(M)))
     
     for j = 1:length(M)
         Y = V * M[j] * inv(V)

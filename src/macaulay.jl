@@ -1,71 +1,5 @@
-export macaulay_mat, solve_macaulay
-using LinearAlgebra
-
-function is_not_homogeneous(p)
-    L = [total_degree(t) for t in Hecke.terms(p)]
-    return maximum(L) != minimum(L)
-end
-
-export macaulay_mat
-
-
-######################################################################################################
-#
-# Creation of Linear algebra structures.
-#
-######################################################################################################
-
-## Present issues.
-# Performance is not good, and garbage collector runs way too much.
-# bizzare reversal should be made more robust.
-# homogeneity is not handled.
-#
-@doc Markdown.doc"""
-    macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
-                      X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
-
-Constructs the sparse macaulay matrix defined by the polynomials `P` and degree bound `rho`. The argument `X`
-is a list of variables of the ambient polynomial ring used to construct the multiplier monomials. 
-"""
-function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
-                      X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
-
-    degrees = unique!(map(p->total_degree(p),P))
-    monomial_set    = Set{Hecke.Generic.MPoly{T}}()
-    mult_monomials  = Array{Array{Hecke.Generic.MPoly{T}}}(undef, maximum(degrees))
-    
-    for d in degrees
-        if ish
-            mult_monomials[d] = monomials_of_degree(X, rho-d)
-        else
-            mult_monomials[d] = monomials_of_degree(X, 0:rho-d)
-        end
-    end
-    for p in P
-        for m in mult_monomials[total_degree(p)]
-            push!(monomial_set, monomials(m*p)...)
-        end
-    end
-
-    # The method "isless" is defined in AbstractAlgebra. By default Julia will use this to sort.
-    monomial_set = collect(monomial_set)
-    sort!(monomial_set, rev=true)
-    monomial_dict = Dict(monomial_set[i]=>i for i=1:length(monomial_set))
-
-    # Create sparse rows for each m*p, with m a mulitplier monomial and p a polynomial.
-    R = base_ring(parent(P[1]))    
-    macaulay_matrix = sparse_matrix(R)
-    for p in P
-        for m in mult_monomials[total_degree(p)]
-
-            srow = sparse_row(R, [monomial_dict[mon] for mon in monomials(m*p)],
-                              collect(coefficients(p)))
-            push!(macaulay_matrix, srow)
-        end
-    end
-
-    return macaulay_matrix, monomial_dict
-end
+export macaulay_mat, solve_macaulay, solve_affine_system, solve_projective_system
+export solve_affine_groebner_system, solve_projective_groebner_system
 
 
 ######################################################################################################
@@ -89,7 +23,7 @@ function solve_affine_system(P; kwds...)
 end
 
 function solve_projective_system(P; kwds...)
-    @assert !any(is_not_homogeneous, P)
+    @assert all(ishomogeneous, P)
     _solve_system_method_dispatch(P, true; kwds...)
 end
 
@@ -179,7 +113,7 @@ INPUTS:
 
 """
 function solve_macaulay(P; kwds...)
-    ish = !any(is_not_homogeneous, P)
+    ish = all(ishomogeneous, P)
     @vprint :padic_solver 2 "-- Homogeneity $(ish)"
     if !ish return solve_affine_system(P; kwds...) else return solve_projective_system(P; kwds...) end
 end
@@ -396,7 +330,7 @@ end
 #     K = base_ring(the_ring)
     
 #     X = gens(the_ring)
-#     ish = !any(is_not_homogeneous, P)
+#     ish = !any(!ishomogeneous, P)
 
 #     t0 = time()
 #     R, L = macaulay_mat(P, X, rho, ish)
