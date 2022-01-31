@@ -103,21 +103,20 @@ function _solve_system_method_dispatch(P, is_homogeneous; method = :truncated_no
         return _solver_engine(P, is_homogeneous; method = :given_GB, kwds...)
         
     elseif method == :groebner
-        # 1. Compute the groebner basis over the exact field.
-        I = ideal(parent(P[1]), P)
-        #gb = Oscar.groebner_basis(I)
 
-        # Fetch the leading monomials somehow.
-        @error "method == :groebner is not implemented."
-        LP = "TODO"
-        
+        use_order = :ordering in kwds ? kwds[:ordering] : ordering(parent(P[1]))
+        I = ideal(P)
+
+        # We assume groebner_basis is implemented for the given polynomial type.
+        gb = groebner_basis(I, ordering=use_order) 
+
         # 2. Call the Solver Engine with the groebner basis and leading monomials.
-        return _solver_engine(P, is_homogeneous, LP; kwds...)
+        return _solver_engine(gb, is_homogeneous; method = :given_GB, kwds...)
         
     elseif method isa String
-        @error "Method must be of type Symbol."
+        ArgumentError("Keyword 'method' must be of type Symbol.")
     else
-        @error "Specified method is not implemented"
+        ArgumentError("method = $method  is not recognized by the solver.")
     end
 end
 

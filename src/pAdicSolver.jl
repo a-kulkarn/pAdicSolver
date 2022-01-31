@@ -8,10 +8,9 @@ using Dory
 # Add a nullspace method for pAdic arrays.
 import Dory: nullspace
 
-# TODO: check if Singular is installed.
-if true
-    import Singular
-end
+# We might choose to add some functionality depending on Singular later.
+# import Singular
+
 
 include("mindex.jl")
 include("matrix.jl")

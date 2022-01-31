@@ -148,40 +148,22 @@ function simultaneous_eigenvalues_schur(M::Vector)
     Qp = base_ring(M[1])
     Mrand = sum(A * rand_padic_int(Qp) for A in M) # non-unit random causes problems
 
-    @vprint :padic_solver 2 "Valuations of singular values: "
-    @vprint :padic_solver 2 valuation.(singular_values(M[1]))
-
-    # We will assume that M[1] is well-conditioned. for now.
-    
-    # The rectangular solve step is enough to kill off any helpful data mod p.
-    @vtime :padic_solver 2 I0 = inv(M[1])
-
-    
-    #println("eigvalues: ", invariant_subspaces.values)
-    #println()
-    #println("eigspaces: ", length(invariant_subspaces.spaces))
-
     Mg = I0 * (M[2] + M[3] + M[5] + M[6])
         
     # eigenvectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     X, V = Dory.block_schur_form(Mg)
-        
-    sol_array = Array{Array{padic,1},1}()
-    for j in 1:length(M)
+    simple_blocks = filter(x->length(x)==1, Dory.diagonal_block_ranges(X))
 
-        # Put the other matrix into schur form
-        Y = inv(V)*(I0*M[j])*V
-        
-        for i=1:size(X,2)
-            if (i == 1 && iszero(X[i, i+1])) ||
-                (i==size(X, 2) && iszero(X[i-1, i])) ||
-                (iszero(X[i, i-1]) && iszero(X[i+1, i]))
-                
-                push!(sol_array[j], Y[i,i])
-            end
+    # Allocate and populate
+    sol_array = matrix(Qp, fill(zero(Qp), length(simple_block), length(M)))
+    
+    for j = 1:length(M)
+        Y = V * M[j] * inv(V)
+        for ran in simple_blocks
+            sol_array[first(ran), j] = Y[i,i]
         end
     end
-    return hcat(sol_array...)
+    return sol_array
 end
 
 
