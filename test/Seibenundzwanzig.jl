@@ -4,7 +4,8 @@
 
     include(".cubic_surface_eqns.jl")
 
-    sol = solve_macaulay(P, rho=5, eigenvector_method = :tropical)
+    sol = solve_affine_system(P, rho=5, eigenvector_method = :tropical)
+    padic_sol = solve_affine_system(P, rho=5, eigenvector_method=:qr);
     
     ## We should get this output running the tropical solver.
     tropical_test_data = [
@@ -37,5 +38,5 @@
         6//1  3//1  0//1   6//1  3//1]
 
     @test min.(sol) == tropical_test_data
-
+    @test isempty(padic_sol)
 end 
