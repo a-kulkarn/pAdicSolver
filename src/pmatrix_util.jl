@@ -133,7 +133,7 @@ function simultaneous_eigenvalues_power(M::Vector)
 end
 
 @doc Markdown.doc"""
-    simultaneous_eigenvalues_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem)
+    simultaneous_eigenvalues_schur(M::Vector)
 
 (Internal function) Compute the eigenvalues of a list of commuting matrices, given as an array. In the
 specific case that the matrices are mult-by-coordinate-variable operators on R/I. The method attempts to
@@ -178,6 +178,11 @@ function simultaneous_eigenvalues_tropical(M::Vector)
     n = size(M[1], 1)
     base_zero = zero(Qp)
 
+    # Scale all matrices by their norm.
+    # norms_of_M = [minimum(valuation.(m)) for m in M]
+    # pi = uniformizer(Qp)
+    # M = [pi^(-norms_of_M[i]) * m[i] for m in M]
+
     # Setup containers
     # We also consider `V` to be one of the allocated containers.
     V = Dory.identity_matrix(Qp, n)
@@ -194,7 +199,7 @@ function simultaneous_eigenvalues_tropical(M::Vector)
     
     for i = 2:length(M)
         
-        #@info "ROUND $i"
+        # @info "ROUND $i" block_ranges
 
         # We want to perturb the original matrix a little to ensure that the blocks
         # detected in previous iterations stay intact.
@@ -209,9 +214,9 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             end
         end
         
-        #@info "Input of Block Schur Form:" elt_info.(B)
+        # @info "Input of Block Schur Form:" elt_info.(B)
         X, Vi = Dory.block_schur_form(B, shift=tropical_shift, iter_bound=(m,N)->100)
-        #@info "Output of Block Schur Form:" elt_info.(X)
+        # @info "Output of Block Schur Form:" elt_info.(X)
         
         #@info "Output of Block Schur Form:" elt_info.(X)
         #@info "Transform:" elt_info.(V)
@@ -238,10 +243,10 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             tol_check = x->!Dory.isapprox_zero(x, valuation_atol = min(norm_val, 0) + min_prec)
             boolean_mats[j] = tol_check.(A)
 
-            if false && j == i
+            if true && (j == 2 || j==i)
                 @info " " norm_val min_prec
                 @info " " elt_info.(A)
-                @info boolean_mats[j]
+                @info " " boolean_mats[j]
             end
 
         end
@@ -265,11 +270,12 @@ function simultaneous_eigenvalues_tropical(M::Vector)
         C = Hecke.mul!(C, Vi, V)
         V, C = C, V
 
-        #for j = 1:length(M)
-            #i == j && @info  "Round $(i),  Matrix $(j):" elt_info.(M[j])
-        #end         
+        # for j = 1:length(M)
+        #     i == j && @info  "Round $(i),  Matrix $(j):" elt_info.(M[j])
+        # end         
     end
 
+    @info "Block ranges" block_ranges 
     
     ########################################
     # Extract eigenvalues after simultaneous diagonalization.
