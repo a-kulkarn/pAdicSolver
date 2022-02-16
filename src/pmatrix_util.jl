@@ -78,7 +78,7 @@ end
 
 @doc Markdown.doc"""
     simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
-            --> eigenvalue_matrix :: Hecke.Generic.MatElem{T}
+            -> eigenvalue_matrix :: Hecke.Generic.MatElem{T}
 
 (Internal function) Compute the eigenvalues of a list of commuting matrices, given as an array. In the
 specific case that the matrices are mult-by-coordinate-variable operators on R/I
@@ -235,7 +235,7 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             min_prec = minimum(precision.(A))
 
             # NOTE: We need zero entries to show up as zero bits for the block form check.
-            tol_check = x->!Dory.isapprox_zero(x, valuation_atol = min(norm_val, 0) + min_prec)
+            tol_check = x->!Dory.isapprox_zero(x, valuation_atol = min(norm_val, -5) + min_prec)
             boolean_mats[j] = tol_check.(A)
 
             if false && j == i

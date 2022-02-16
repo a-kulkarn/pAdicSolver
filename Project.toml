@@ -1,6 +1,6 @@
 name = "pAdicSolver"
 uuid = "7ef55214-9360-11e9-1baf-2b4794cbc8c6"
-authors = ["Avi Kulkarni <avinash@mis.mpg.de>"]
+authors = ["Avi Kulkarni <avinash.a.kulkarni@dartmouth.edu>"]
 version = "0.1.0"
 
 [deps]
