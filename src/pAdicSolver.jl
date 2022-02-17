@@ -15,7 +15,7 @@ import Dory: nullspace
 include("mindex.jl")
 include("matrix.jl")
 include("TropicalInterval.jl")
-include("pmatrix_util.jl")
+include("simultaneous_eigen.jl")
 include("macaulay.jl")
 include("test_util.jl")
 #include("newton.jl")
@@ -29,7 +29,7 @@ include("test_util.jl")
 
 function __init__()
     # Attach the necessary verbose scopes to Hecke's global dicitionary.
-    # Hecke.add_verbose_scope(:padic_solver)
+    Hecke.add_verbose_scope(:padic_solver)
     return
 end
 

@@ -3,55 +3,6 @@ const DEFAULT_VALUATION_OF_ZERO = BigInt(2^63-1)
 
 ######################################################################################################
 #
-#  Legacy code
-#
-######################################################################################################
-
-# """
-#     nullspace(A::Array{padic,2})
-
-# Compute the nullspace of an array of padic numbers, viewed as a matrix.
-# """
-# function nullspace(A::Array{padic,2})
-#     M = matrix(A)
-#     return Hecke.nullspace(M)[2].entries
-# end
-
-
-######################################################################################################
-#
-#  Normalize solutions(?)
-#
-######################################################################################################
-
-# Why did Bernard need this step? It seems totally pointless...
-# function normalize_solution!(Xi, ish)
-#     Sol = Xi
-    
-#     if !ish
-#         i=1            
-#         while i <= size(Sol,1)
-#             scale_factor = Sol[i,1]
-#             if iszero(scale_factor)
-#                 println()
-#                 println("!-- Ignoring solution at infinity --!")
-#                 println()
-                
-#                 Sol = vcat(Sol[1:(i-1), :], Sol[i+1:size(Sol,1), :])
-#             else
-#                 Sol[i,:] *= inv(scale_factor)
-#                 i+=1
-#             end
-#         end
-#         #else
-#         # do nothing otherwise, for now.
-#     end
-#     return Sol
-# end
-
-
-######################################################################################################
-#
 #  Tropical shifting choices in QR iteration
 #
 ######################################################################################################
@@ -274,8 +225,6 @@ function simultaneous_eigenvalues_tropical(M::Vector)
     # Extract eigenvalues after simultaneous diagonalization.
 
     # Initialize the solution array.
-    # sol_array = Hecke.MatrixSpace(Hecke.QQ, n, length(M))()
-
     sol_array = Matrix{TropicalInterval}(undef, n, length(M))
     
     for j = 1:length(M)
@@ -289,7 +238,6 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             
             # In any particular block, the valuations of the eigenvalues are equal.
             # We need to check if the block has a kernel, as a special default value needs to be assigned.
-
 
             if zero(Qp) in sing_vals
                 val_of_eigenvalues = fmpq(precision(Qp))
@@ -308,47 +256,5 @@ function simultaneous_eigenvalues_tropical(M::Vector)
     end
     
     return sol_array
-
-    ####################
-    # Junk (Hopefully)
-    
-    # sol_array = Array{Array{Number,1},1}()
-    # for j in 1:length(M)
-
-    #     # Put the other matrix into schur form
-    #     ycoords = Array{Number,1}()
-    #     #Y = V * M[j] * IV
-    #     Y = M[j]
-    #     block_start_index = 1
-
-    #     #@info  "Matrix $(j):" elt_info.(Y)
-        
-    #     for i=1:size(X,2)
-    #         if (i == size(X,2) || iszero(X[i+1, i]))
-                
-    #             block_inds = block_start_index:i
-    #             block = Y[block_inds, block_inds]
-
-    #             sing_vals = singular_values(block)
-
-    #             #@info valuation.(sing_vals)
-                
-    #             # In any particular block, the valuations of the eigenvalues are equal.
-    #             # We need to check if the block has a kernel, as a special default value needs to be assigned.
-    #             if zero(Qp) in sing_vals
-    #                 val_of_eigenvalues = DEFAULT_VALUATION_OF_ZERO
-    #             else
-    #                 sing_val_sizes = [BigInt(valuation(x)) for x in sing_vals]
-    #                 val_of_eigenvalues = sum(sing_val_sizes) // length(sing_vals)
-    #             end
-                
-    #             push!(ycoords, [val_of_eigenvalues for r in block_inds]...)
-    #             block_start_index = i+1
-    #         end                
-    #     end
-    #     push!(sol_array, ycoords)
-    # end
-
-    # return hcat(sol_array...)
 end
 

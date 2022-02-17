@@ -581,31 +581,11 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
 end
         
 @doc Markdown.doc"""
-    iwasawa_step(N :: Array{T,2} where T <: Number, L0)
-    iwasawa_step(N :: Array{padic,2} , IdL0)
-    iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
+    iwasawa_step(N :: Hecke.Generic.MatSpaceElem{<:Dory.DiscreteValuedFieldElem}, L0)
 
-    Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
-    together with  Nr = N*inv(inv(P)Q)^T.
+Return the QR-factorization object (For PN₀P' = QR, return <inv(P)Q, R, P'>)
+together with  Nr = N*inv(inv(P)Q)^T.
 """
-
-# function iwasawa_step(N :: Array{T,2} where T <: Number, L0)
-#     F = qr(Array(transpose(N[IdL0,:])) , Val(true))
-#     return F, N*F.Q
-# end
-
-# function iwasawa_step(N :: Array{padic,2} , IdL0)
-    
-#     F = padic_qr(transpose(matrix(N[IdL0,:])) , col_pivot=Val(true))
-#     Qinv = Dory.inv_unit_lower_triangular(F.Q)
-#     Fpinv= Dory.inverse_permutation(F.p)
-
-#     X = Qinv[Fpinv,:].entries    
-#     Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
-    
-#     return Farr, N*X
-# end
-
 function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{<:Dory.DiscreteValuedFieldElem}, L0)
 
     sorted_monomial_rows = sort(collect(values(L0)))
