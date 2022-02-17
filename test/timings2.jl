@@ -22,7 +22,7 @@ for n in [2,4,5]
 
     for i=1:num_samp
         try
-            global P = hcat([[rand_padic_int(Qp) for i in 1:n] for j in 1:s]...)*M
+            global P = hcat([[randint(Qp) for i in 1:n] for j in 1:s]...)*M
 
             t0 = time()
             sol = solve_macaulay(P)

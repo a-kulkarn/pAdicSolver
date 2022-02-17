@@ -7,22 +7,15 @@ const DEFAULT_VALUATION_OF_ZERO = BigInt(2^63-1)
 #
 ######################################################################################################
 
-"""
-    nullspace(A::Array{padic,2})
+# """
+#     nullspace(A::Array{padic,2})
 
-Compute the nullspace of an array of padic numbers, viewed as a matrix.
-"""
-function nullspace(A::Array{padic,2})
-    M = matrix(A)
-    return Hecke.nullspace(M)[2].entries
-end
-
-
-struct QRPadicArrayPivoted
-    Q::Array{padic,2}
-    R::Array{padic,2}
-    p::Array{Int64,1}
-end
+# Compute the nullspace of an array of padic numbers, viewed as a matrix.
+# """
+# function nullspace(A::Array{padic,2})
+#     M = matrix(A)
+#     return Hecke.nullspace(M)[2].entries
+# end
 
 
 ######################################################################################################
@@ -97,19 +90,19 @@ function simultaneous_eigenvalues(M::Vector; method=:schur)
     elseif method in [:power]
         return simultaneous_eigenvalues_power(M)
     else
-        @error "method = $method is not recognized by simultaneous_eigenvalues."
+        error("method = $method is not recognized by simultaneous_eigenvalues.")
     end
 end
 
 function simultaneous_eigenvalues_power(M::Vector)
     
     Qp = base_ring(M[1])
-    Mg = sum(A*rand_padic_int(Qp) for A in M) # non-unit random causes problems
+    Mg = sum(A*randint(Qp) for A in M) # non-unit random causes problems
 
     # TODO: Check well-conditionedness of eigenvalue problem for Mg
     
-    @vprint :padic_solver 2 "Valuations of singular values:"
-    @vprint :padic_solver 2 valuation.(singular_values(M[1]))
+    #@vprint :padic_solver 2 "Valuations of singular values:"
+    #@vprint :padic_solver 2 valuation.(singular_values(M[1]))
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     eigen_subspaces  = eigspaces(Mg, method="power")
@@ -142,13 +135,17 @@ use the Schur form decomposition.
 INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
 Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 """
-
 function simultaneous_eigenvalues_schur(M::Vector)
     
     Qp = base_ring(M[1])
-    Mrand = sum(A * rand_padic_int(Qp) for A in M) # non-unit random causes problems
-    Mg = M[2] + M[3] + M[5] + M[6]
-        
+    Mrand = sum(A * randint(Qp) for A in M) # non-unit random causes problems
+
+    if length(M) >= 6
+        Mg = M[2] + M[3] + M[5] + M[6]
+    else
+        Mg = Mrand
+    end
+    
     # eigenvectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
     X, V = Dory.block_schur_form(Mg)
     simple_blocks = filter(x->length(x)==1, Dory.diagonal_block_ranges(X))
@@ -159,7 +156,9 @@ function simultaneous_eigenvalues_schur(M::Vector)
     for j = 1:length(M)
         Y = V * M[j] * inv(V)
         for ran in simple_blocks
-            sol_array[first(ran), j] = Y[i,i]
+            for i in ran
+                sol_array[i, j] = Y[i, i]
+            end
         end
     end
     return sol_array
@@ -180,7 +179,7 @@ function simultaneous_eigenvalues_tropical(M::Vector)
 
     # Setup containers
     # We also consider `V` to be one of the allocated containers.
-    V = Dory.identity_matrix(Qp, n)
+    V = Dory.unaliased_identity_matrix(Qp, n)
     B = deepcopy(V)
     C = deepcopy(V)
     zero_mat = zero_matrix(Qp, n, n)
@@ -238,7 +237,7 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             tol_check = x->!Dory.isapprox_zero(x, valuation_atol = min(norm_val, -5) + min_prec)
             boolean_mats[j] = tol_check.(A)
 
-            if false && j == i
+            if true && j == i
                 @info " " norm_val min_prec
                 @info " " elt_info.(A)
                 @info boolean_mats[j]

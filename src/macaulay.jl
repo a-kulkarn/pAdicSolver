@@ -33,7 +33,7 @@ function _solve_system_method_dispatch(P, is_homogeneous; method = :truncated_no
     if method in [:truncated_normal_form, :tnf, :macaulay]
         return _solver_engine(P, is_homogeneous; method = :tnf, kwds...)
 
-    elseif method in [:given_groebner, :given_GB]
+    elseif method in [:given_groebner, :given_GB, :givenGB]
         return _solver_engine(P, is_homogeneous; method = :given_GB, kwds...)
         
     elseif method == :groebner
@@ -145,7 +145,7 @@ function _solver_engine(P, is_homogeneous; method = :tnf, eigenvector_method = :
         inv(M[1])
     catch e
         !isa(e, Dory.InconsistentSystemError) && throw(e)
-        rand_combo = sum(Dory.rand_padic_int(parent(M[1][1,1])) * M[j] for j=1:length(M))
+        rand_combo = sum(Dory.randint(parent(M[1][1,1])) * M[j] for j=1:length(M))
 
         # Try to invert one more time with a random linear combination, and if it fails,
         # there is a lack of precision to solve the polynomial system.
@@ -252,7 +252,7 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
 end
 
 function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Generic.MPolyElem{<:Hecke.FieldElem}, 1}, is_homogeneous::Bool;
-                                  ordering=ordering(P))
+                                  ordering=ordering(parent(P[1])))
 
     the_ring = parent(P[1])
     K = base_ring(the_ring)
@@ -270,7 +270,7 @@ function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Gener
     XR = [change_parent(R, v) for v in X]
     xi_operators = [[rem(v*b, PR) for b in BR] for v in XR]
 
-    if !(K isa Hecke.NonArchLocalField)
+    if !(K isa Dory.DiscreteValuedField)
         # TODO: Figure out what the user should do in this case...
         K = PadicField(29,30)
     end
@@ -526,6 +526,13 @@ end
 #
 ######################################################################################################
 
+struct QRPadicArrayPivoted{T}
+    Q::Array{T,2}
+    R::Array{T,2}
+    p::Array{Int64,1}
+end
+
+
 @doc Markdown.doc"""
     iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic} , L0)
     Return the QR-factorization object (For PN_0P' = QR, return <inv(P)Q, R, P'>)
@@ -582,26 +589,29 @@ end
     together with  Nr = N*inv(inv(P)Q)^T.
 """
 
-function iwasawa_step(N :: Array{T,2} where T <: Number, L0)
-    F = qr(Array(transpose(N[IdL0,:])) , Val(true))
-    return F, N*F.Q
-end
+# function iwasawa_step(N :: Array{T,2} where T <: Number, L0)
+#     F = qr(Array(transpose(N[IdL0,:])) , Val(true))
+#     return F, N*F.Q
+# end
 
-function iwasawa_step(N :: Array{padic,2} , IdL0)
+# function iwasawa_step(N :: Array{padic,2} , IdL0)
     
-    F = padic_qr(transpose(matrix(N[IdL0,:])) , col_pivot=Val(true))
-    Qinv = Dory.inv_unit_lower_triangular(F.Q)
-    Fpinv= Dory.inverse_permutation(F.p)
+#     F = padic_qr(transpose(matrix(N[IdL0,:])) , col_pivot=Val(true))
+#     Qinv = Dory.inv_unit_lower_triangular(F.Q)
+#     Fpinv= Dory.inverse_permutation(F.p)
 
-    X = Qinv[Fpinv,:].entries    
-    Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
+#     X = Qinv[Fpinv,:].entries    
+#     Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
     
-    return Farr, N*X
-end
+#     return Farr, N*X
+# end
 
-function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0)
+function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{<:Dory.DiscreteValuedFieldElem}, L0)
 
-    F = padic_qr(transpose(N[ sort(collect(values(L0))),:]), col_pivot=Val(true))
+    sorted_monomial_rows = sort(collect(values(L0)))
+    Nkbase = N[sorted_monomial_rows, :]
+    
+    F = padic_qr(transpose(Nkbase), col_pivot=Val(true))
     Qinv = Dory.inv_unit_lower_triangular(F.Q)
     Fpinv= Dory.inverse_permutation(F.p)
 
