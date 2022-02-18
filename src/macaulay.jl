@@ -551,7 +551,7 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
     
     F = padic_qr(transpose(N[sorted_column_labels,:]), col_pivot=Val(true))
     Qinv  = Dory.inv_unit_lower_triangular(F.Q)
-    Fpinv = Dory.inverse_permutation(F.p)
+    Fpinv = invperm(F.p)
 
     # X = transpose(Qinv[Fpinv,:])
     X = transpose(Qinv)[Fpinv,:]
@@ -593,7 +593,7 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{<:Dory.DiscreteValuedField
     
     F = padic_qr(transpose(Nkbase), col_pivot=Val(true))
     Qinv = Dory.inv_unit_lower_triangular(F.Q)
-    Fpinv= Dory.inverse_permutation(F.p)
+    Fpinv= invperm(F.p)
 
     X = Qinv[Fpinv,:]
     Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
