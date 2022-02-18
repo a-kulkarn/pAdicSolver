@@ -1,5 +1,5 @@
 export macaulay_mat, solve_macaulay, solve_affine_system, solve_projective_system
-export solve_affine_groebner_system, solve_projective_groebner_system
+export solve_affine_groebner_system, solve_projective_groebner_system, solve_system
 
 
 ######################################################################################################
