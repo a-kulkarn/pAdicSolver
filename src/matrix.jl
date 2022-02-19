@@ -194,19 +194,25 @@ function mult_matrices(B, X, K, L, ish = false)
 
     # For an affine system, '1' is needed as a monomial as well.
     if !ish Y = vcat([parent(X[1])(1)], X) else Y = X end
-    
-    function construct_monomial_mult_matrix(v)
-        M = fill(eltype(K)(0), length(B), size(K,2))
-        
+
+    # TODO: Best to turn this into a for loop.
+    rng = base_ring(K)
+
+    Z = fill(zero(rng), length(B), size(K,2))
+    monomial_mats = fill(Z, length(Y))
+
+    for j = 1:length(Y)
+        v = Y[j]
+        M = fill(zero(rng), length(B), size(K,2))
+
         for (m,i) in collect(B)
             k = L[m*v]
             M[i, :] = K.entries[k, :] # Might be nice to make this compatible with matrix type.
         end
-        
-        return M
+        monomial_mats[j] = M
     end
     
-    return [construct_monomial_mult_matrix(v) for v in Y]
+    return monomial_mats
 end
 
 

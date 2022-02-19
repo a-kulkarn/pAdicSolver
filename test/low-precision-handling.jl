@@ -17,6 +17,4 @@
     #pAdicSolver.solve_affine_system(GB, eigenvector_method=:tropical)
     
     @test_throws Dory.InsufficientPrecisionError pAdicSolver.solve_affine_system(GB, eigenvector_method=:tropical)
-
-    @test true
 end

@@ -3,27 +3,21 @@
 
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](https://a-kulkarn.github.io/pAdicSolver/dev)
 
-Package for solving 0-dimensional padic polynomial systems. Examples for usage are contained in the "/test/" directory.
+Package for solving 0-dimensional padic polynomial systems. 
 
 - Dense polynomial system solver for p-adic polynomial systems.
-- Input polynomials are AbstractAlgebra.jl polynomials instead of "DynamicPolynomials". A conversion interface is included, but not particularly well-maintained.
+- Input polynomials are AbstractAlgebra.jl polynomials instead of "DynamicPolynomials".
 
 
 ## REQUIRED PACKAGES:
-- Dory.jl and dependencies
-- MultivariatePolynomials  (not strictly needed, but used for legacy tests)
-- DynamicPolynomials       (not strictly needed, but used for legacy tests)
-
-Dory.jl can be found at: https://github.com/a-kulkarn/Dory.git
+- [Hecke](https://github.com/thofma/Hecke.jl)
+- [Dory](https://github.com/a-kulkarn/Dory.git) and dependencies
 
 
-OPTIONAL PACKAGES:
--- ConvertDynamicPolynomials
+### Related Packages:
+- [ConvertDynamicPolynomials](https://github.com/a-kulkarn/ConvertDynamicPolynomials.git)
+- [Bernard Mourrain's solver](https://gitlab.inria.fr/AlgebraicGeometricModeling/AlgebraicSolvers.jl.git)
 
-ConvertDynamicPolynomials can be found at: https://github.com/a-kulkarn/ConvertDynamicPolynomials.git
-
-This package is a fork of Bernard Mourrain's solver.
-https://gitlab.inria.fr/AlgebraicGeometricModeling/AlgebraicSolvers.jl.git
 
 ## Installation
 

@@ -13,7 +13,7 @@ using Dory
         M = monomials_of_degree(gens(R), d)
         s = length(M)
 
-        P = hcat([[2*rand_padic_int(Qp) - 1 for i in 1:n] for j in 1:s]...)*M
+        P = hcat([[2*randint(Qp) - 1 for i in 1:n] for j in 1:s]...)*M
         sol = solve_macaulay(P)
         Er = rel_error(P,sol)
 
@@ -27,7 +27,7 @@ using Dory
     M = monomials_of_degree(gens(R), d)
     s = length(M)
 
-    P = hcat([[2*rand_padic_int(Qp) - 1 for i in 1:n] for j in 1:s]...)*M
+    P = hcat([[2*randint(Qp) - 1 for i in 1:n] for j in 1:s]...)*M
     sol = solve_macaulay(P)
     Er = rel_error(P,sol)
 

@@ -1,8 +1,5 @@
-import Base:
-    zero, one, show, print, length, getindex, setindex!, copy, promote_rule, convert, eltype, get
-    *, /, //, -, +, ==, ^, divrem, conj, rem, real, imag, diff
-
-export idx, rev_idx, length
+import Base: zero, one, show, print, length, getindex, setindex!, copy, promote_rule, convert, eltype, get
+import Base: *, /, //, -, +, ==, ^, divrem, conj, rem, real, imag, diff
 
 mutable struct MonomialIdx
     terms::Dict{Dory.MPolyElem{T} where T, Int64} 
