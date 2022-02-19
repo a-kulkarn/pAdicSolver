@@ -46,7 +46,7 @@ end
 function simultaneous_eigenvalues(::Val{:power}, M::Vector)
     
     Qp = base_ring(M[1])
-    Mg = sum(A*randint(Qp) for A in M) # non-unit random causes problems
+    Mg = sum(A*randunit(Qp) for A in M) # non-unit random causes problems
 
     # TODO: Check well-conditionedness of eigenvalue problem for Mg
     
@@ -77,7 +77,7 @@ end
 function simultaneous_eigenvalues(::Val{:schur}, M::Vector)
     
     Qp = base_ring(M[1])
-    Mrand = sum(A * randint(Qp) for A in M) # non-unit random causes problems
+    Mrand = sum(A * randunit(Qp) for A in M) # non-unit random causes problems
 
     if length(M) >= 6
         Mg = M[2] + M[3] + M[5] + M[6]
