@@ -15,7 +15,7 @@ end
 
 ######################################################################################################
 #
-#  Normalized Simultaneous Eigenvalues.
+#  Simultaneous Eigenvalues.
 #
 ######################################################################################################
 
@@ -32,20 +32,18 @@ Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
 """
 function simultaneous_eigenvalues(M::Vector; method=:schur)
 
-    if method in [:schur, :qr]
-        return simultaneous_eigenvalues_schur(M)
-        
-    elseif method in [:tropical]
-        return simultaneous_eigenvalues_tropical(M)
-        
-    elseif method in [:power]
-        return simultaneous_eigenvalues_power(M)
-    else
-        error("method = $method is not recognized by simultaneous_eigenvalues.")
+    if method isa String
+        method = Symbol(method)
     end
+    
+    if method in [:schur, :qr]
+        method = :schur
+    end
+    
+    return simultaneous_eigenvalues(Val(method), M)
 end
 
-function simultaneous_eigenvalues_power(M::Vector)
+function simultaneous_eigenvalues(::Val{:power}, M::Vector)
     
     Qp = base_ring(M[1])
     Mg = sum(A*randint(Qp) for A in M) # non-unit random causes problems
@@ -56,12 +54,11 @@ function simultaneous_eigenvalues_power(M::Vector)
     #@vprint :padic_solver 2 valuation.(singular_values(M[1]))
 
     # eigen vectors of inv(M0)*M[1], which are common eigenvectors of inv(M0)*M[i]
-    eigen_subspaces  = eigspaces(Mg, method="power")
+    eigen_subspaces = eigspaces(Mg, method = :power)
     
     #println("eigvalues: ", invariant_subspaces.values)
     #println()
     #println("eigspaces: ", length(invariant_subspaces.spaces))
-
 
     X = matrix(Qp, fill(zero(Qp), length(eigen_subspaces.spaces), length(M)))
     for j in 1:length(M)
@@ -76,17 +73,8 @@ function simultaneous_eigenvalues_power(M::Vector)
     return X
 end
 
-@doc Markdown.doc"""
-    simultaneous_eigenvalues_schur(inputM :: Array{Array{T,2},1} where T <: FieldElem)
 
-(Internal function) Compute the eigenvalues of a list of commuting matrices, given as an array. In the
-specific case that the matrices are mult-by-coordinate-variable operators on R/I. The method attempts to
-use the Schur form decomposition.
-
-INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
-Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
-"""
-function simultaneous_eigenvalues_schur(M::Vector)
+function simultaneous_eigenvalues(::Val{:schur}, M::Vector)
     
     Qp = base_ring(M[1])
     Mrand = sum(A * randint(Qp) for A in M) # non-unit random causes problems
@@ -116,12 +104,7 @@ function simultaneous_eigenvalues_schur(M::Vector)
 end
 
 
-# Function to extract information from a local field element.
-elt_info(x) = (iszero(x), valuation(x), precision(x))
-
-
-# TODO: Move to Dory?
-function simultaneous_eigenvalues_tropical(M::Vector)
+function simultaneous_eigenvalues(::Val{:tropical}, M::Vector)
 
     # Basic setup
     Qp = base_ring(M[1])
@@ -188,15 +171,15 @@ function simultaneous_eigenvalues_tropical(M::Vector)
             tol_check = x->!Dory.isapprox_zero(x, valuation_atol = min(norm_val, -5) + min_prec)
             boolean_mats[j] = tol_check.(A)
 
-            if true && j == i
+            if false && j == i
                 @info " " norm_val min_prec
                 @info " " elt_info.(A)
-                @info boolean_mats[j]
+                @info " " boolean_mats[j]
             end
 
         end
 
-        # Refine the list of ranges based on common blocks post-change of coordinates.
+        # Refine the list of ranges based on common blocks after change of coordinates.
         all_block_ranges = [Dory.diagonal_block_ranges(A) for A in boolean_mats]
         block_ranges = let
             temp = Vector{UnitRange{Int}}()
