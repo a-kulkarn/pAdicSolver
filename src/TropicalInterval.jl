@@ -3,7 +3,7 @@ struct TropicalInterval
     max::Union{Hecke.fmpq, AbstractFloat}
 end
 
-import Base: min, max, minimum, maximum
+import Base: min, max, minimum, maximum, ==
 
 # Access functions.
 min(x::TropicalInterval) = x.min
@@ -13,4 +13,8 @@ minimum(::TropicalInterval) = min
 max(x::TropicalInterval) = x.max
 maximum(::TropicalInterval) = max
 supremum(::TropicalInterval) = max
+
+
+# Comparison.
+(==)(x::TropicalInterval, y::TropicalInterval) = min(x) == min(y) && max(x) == max(y)
 
