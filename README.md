@@ -10,11 +10,8 @@ Package for solving 0-dimensional padic polynomial systems.
 
 
 ## REQUIRED PACKAGES:
-- Dory.jl and dependencies
-- MultivariatePolynomials  (not strictly needed, but used for legacy tests)
-- DynamicPolynomials       (not strictly needed, but used for legacy tests)
-
-Dory.jl can be found at: https://github.com/a-kulkarn/Dory.git
+- [Hecke](https://github.com/thofma/Hecke.jl)
+- [Dory](https://github.com/a-kulkarn/Dory.git) and dependencies
 
 
 ### Related Packages:
