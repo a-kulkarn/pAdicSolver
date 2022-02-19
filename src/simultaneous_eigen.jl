@@ -43,7 +43,7 @@ function simultaneous_eigenvalues(M::Vector; method=:schur)
     return simultaneous_eigenvalues(Val(method), M)
 end
 
-function simultaneous_eigenvalues(::Val{:power}, M::Vector)
+function simultaneous_eigenvalues(::Union{Val{:power}, Val{:inverse}}, M::Vector)
     
     Qp = base_ring(M[1])
     Mg = sum(A*randunit(Qp) for A in M) # non-unit random causes problems

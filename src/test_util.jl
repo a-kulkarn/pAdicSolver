@@ -1,18 +1,11 @@
 
-export rel_error, solcmp
-
-"""
-Gives the list of evaluations of the polynomials in `P` at the points `sol`.
-"""
-function rel_error(P,sol)
-    return [evaluate(p, sol.entries[i,:]) for i in 1:size(sol,1),  p in P]
-end
-
+export abs_error, rel_error, forward_error, solcmp, random_square_system
 
 @doc Markdown.doc"""
     solcmp(args...)
 
-Compare the solution coordinates as sets with multiplicity.
+Compare the solution coordinates as sets with multiplicity. Coordinates are compared with
+`==` rather than `isequal`.
 """
 function solcmp(args...)
     length(args) < 2 && throw(ArgumentError("Must compare at least two solution matrices."))
@@ -37,16 +30,53 @@ function solcmp(args...)
         isempty(Y) || return false
     end
     return true
+end
 
-    #all(y in X for y in Y) || return false
-    #all(x in X for x in X) || return false
-    #return true
 
-    # NOTE: This didn't work. Methinks there is an issue with a hash function and precision.
-    # toSet(A) = Set(A[i, :] for i=1:size(A,1))
-    # X = toSet(args[1])
-    # for Y in args
-    #     !issetequal(X, toSet(Y)) && return false
-    # end
-    # return true
+################################################################################################
+#
+#  pNumerical error
+#
+################################################################################################
+
+"""
+Gives the list of evaluations of the polynomials in `P` at the points `sol`.
+"""
+function abs_error(P, sol)
+    return [evaluate(p, sol.entries[i,:]) for i in 1:size(sol,1),  p in P]
+end
+
+# TODO: Supported for legacy reasons, but technically this is wrong.
+rel_error = abs_error
+
+forward_error = abs_error
+
+################################################################################################
+#
+#  Random generation
+#
+################################################################################################
+
+@doc Markdown.doc"""
+    random_square_system(R, d; homogeneous = false)
+
+Given a polynomial ring `R` and a positive integer `d`, return a random polynomial system
+with `ngens(R)` equations of degree `d`. If `homogeneous = true`, return a random homogeneous
+system with `ngens(R)-1` equations.
+"""
+function random_square_system(R::Hecke.Generic.MPolyRing, d::Int64; homogeneous = false)
+
+    K = base_ring(R)
+
+    if homogeneous
+        n = length(gens(R))-1
+        degs = d
+    else
+        n = length(gens(R))
+        degs = 0:d
+    end
+    
+    M = monomials_of_degree(gens(R), degs)
+    
+    return [randint(K) for i in 1:n, j in 1:length(M)] * M
 end

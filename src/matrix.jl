@@ -1,140 +1,8 @@
-
-#import LinearAlgebra: nullspace
-#using SparseArrays
-
-#=
-function kernel(A::Matrix)
-    U,S,V = svd(A)
-    r=1;
-    while r<=min(size(A,1),size(A,2)) && abs(S[r])> 1.e-4
-        r+=1
-    end
-    r-=1
-    #P = F[:p]
-    #Pi = fill(0, length(P))
-    #for i in 1:length(P) Pi[P[i]]= i end
-    V[:,r+1:end]
-end
-
-function nullspace(A::AbstractSparseMatrix)
-    # F = qrfact(A')
-    # R = F[:R]
-    # r=1;
-    # while r<=min(size(A,1),size(A,2)) && abs(R[r,r])> 1.e-4
-    #     r+=1
-    # end
-    # r-=1
-    # P = F[:prow]
-    # Pi = fill(0, length(P))
-    # for i in 1:length(P) Pi[P[i]]= i end
-    # F[:Q][Pi,r+1:end]
-
-    F = lufact(A')
-    U = F[:U]
-    r = 1
-    while r<=min(size(A,1),size(A,2)) && abs(U[r,r])> 1.e-4
-         r+=1
-    end
-    r-= 1
-    L = F[:L]'
-
-    L0= L[1:r,1:r]
-    K = L[1:r,r+1:end]
-    N = cat(1, - L0\K, eye(size(A,2)-r))
-
-    P = fill(0, size(A,2))
-    for i in 1:size(A,2) P[F[:p][i]]= i end
-    return (F[:Rs] .* N[P,:])
-
-end
-
-function matrix(P::Vector, M::MonomialIdx)
-    A = fill(zero(coeftype(P[1])), length(P), length(M))
-    j = 1
-    for p in P
-        for t in p
-            i = get(M, t.x, 0)
-            if i != 0
-                A[j,i] = t.α
-            end
-        end
-        j+=1
-    end
-    A
-end
-
-function smatrix(P::Vector, M::MonomialIdx)
-    I = Int64[]
-    J = Int64[]
-    T = coeftype(P[1])
-    V = T[]
-    for (p,j) in zip(P,1:length(P))
-        for t in p
-            i = get(M, t.x, 0)
-            if i != 0
-                push!(I,i); push!(J,j), push!(V,t.α)
-            end
-        end
-    end
-    sparse(J,I,V)
-end
-
-
-function mult_basis(N, L::Vector{T}, X) where T
-    Idx = idx(L)
-    L0 = T[]
-    for m in L
-        I = map(t->get(Idx,t,0), [v*m for v in X])
-        if minimum(I)!=0
-            push!(L0,m)
-        end
-    end
-    N0 = fill(zero(N[1,1]), size(N,2),length(L0))
-    for i in 1:length(L0)
-        for j in 1:size(N,2)
-            N0[j,i]= N[get(Idx,L0[i],0),j]
-        end
-    end
-    N0
-    F = qrfact(N0, Val{true})
-    B = []
-    for i in 1:size(N,2)
-        push!(B,L0[F[:p][i]])
-    end
-    B
-end
-
-=#
-
-
-##################################################################
-## AVI: this looks like the part we care about.
-## macaulay_solve runs, though it looks like excluding the other
-## things will kill the toric functionality.
-
-
-# function matrix(P::Vector, M::MonomialIdx)
-#     A = fill(zero(coeftype(P[1])), length(P), length(M))
-#     j = 1
-#     for p in P
-#         for t in p
-#             i = get(M, t.x, 0)
-#             if i != 0
-#                 A[j,i] = t.α
-#             end
-#         end
-#         j+=1
-#     end
-#     A
-# end
-
-
-######################################################################################################
+################################################################################################
 #
-# Monomial functionality
+#  Monomial divisibility
 #
-######################################################################################################
-
+################################################################################################
 
 function is_divisible_by_x0(m)
     return total_degree(gcd(m, gens(parent(m))[1])) > 0
@@ -174,11 +42,11 @@ end
     
 
 
-######################################################################################################
+################################################################################################
 #
 #  Macaulay matrix and multiplication matrices.
 #
-######################################################################################################
+################################################################################################
 
 
 # INPUTS:
