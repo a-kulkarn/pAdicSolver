@@ -17,7 +17,6 @@ export solve_affine_groebner_system, solve_projective_groebner_system, solve_sys
 Given a system of polynomials `P` that is a Groebner basis, with leading monomials `LP`, return
 the solutions to the polynomial system `P`.
 """
-
 function solve_affine_system(P; kwds...)
     _solve_system_method_dispatch(P, false; kwds...)
 end
@@ -27,6 +26,34 @@ function solve_projective_system(P; kwds...)
     _solve_system_method_dispatch(P, true; kwds...)
 end
 
+@doc Markdown.doc"""
+    _padic_solver_groebner_hook(P; ordering=ordering(parent(P[1])))
+
+To access the `method = :groebner` functionality in the solver, one must import this function
+and add a method which outputs a Groebner basis with respect to the specified ordering. This
+method must accept the ordering keyword and get the ordering of the parent polynomial ring from
+the input `P`.
+
+EXAMPLE:
+```
+using pAdicSolver
+using Oscar       # Has groebner basis functionality
+
+import pAdicSolver._solver_groebner_hook as F
+
+function F(P; ordering = ordering(parent(P[1])))
+    return groebner_basis(ideal(P), ordering=ordering)
+end
+
+```
+Then the following will work:
+```
+#Blah
+```
+"""
+function _solver_groebner_hook(P; ordering=ordering(parent(P[1])))
+    error("Groebner hook not added. See documentation for `_solver_groebner_hook`.")
+end
 
 function _solve_system_method_dispatch(P, is_homogeneous; method = :truncated_normal_form, kwds...)
 
@@ -37,15 +64,13 @@ function _solve_system_method_dispatch(P, is_homogeneous; method = :truncated_no
         return _solver_engine(P, is_homogeneous; method = :given_GB, kwds...)
         
     elseif method == :groebner
+        use_order = :ordering in keys(kwds) ? kwds[:ordering] : ordering(parent(P[1]))
+        
+        # Use the user supplied groebner basis function, or error if they have not given one.
+        gb = _solver_groebner_hook(P, ordering = use_order)
 
-        use_order = :ordering in kwds ? kwds[:ordering] : ordering(parent(P[1]))
-        I = ideal(P)
-
-        # We assume groebner_basis is implemented for the given polynomial type.
-        gb = groebner_basis(I, ordering=use_order) 
-
-        # 2. Call the Solver Engine with the groebner basis and leading monomials.
-        return _solver_engine(gb, is_homogeneous; method = :given_GB, kwds...)
+        # 2. Call the Solver Engine with the groebner basis.
+        return _solver_engine(gb, is_homogeneous; method=:given_GB, ordering=use_order, kwds...)
         
     elseif method isa String
         ArgumentError("Keyword 'method' must be of type Symbol.")
@@ -222,7 +247,7 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
         !(length(L) == binomial(rho + np1 - 1, rho))
     end
 
-    # TODO: In theory this causes a bug. 
+    # TODO: In theory this causes a bug.
     @assert !missing_monomials
     
     # The idea of the QR step is two-fold:
@@ -280,7 +305,7 @@ function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Gener
     M = [matrix(K, [coeff(g, b) for b in BR, g in op]) for op in xi_operators]
     M = [m.entries for m in M]
 
-    return M 
+    return M
 end
 
 # TODO: This function should replace the previous version if it tests well.
@@ -390,7 +415,7 @@ end
 #     end
 
 #     # The monomials for the set such that [xi]B \in V.
-#     L0 = monomials_divisible_by_x0(L, ish) 
+#     L0 = monomials_divisible_by_x0(L, ish)
 
 #     @vprint :padic_solver "-- -- rank of Macaulay matrix $(size(R,2) - size(N,2))"
 #     @vprint :padic_solver "-- Null space $size(N,1) x $size(N,2)  $(time()-t0) (s)"
@@ -416,7 +441,7 @@ end
 #     if ish
 #         B = Dict(Dory.divexact(m, gens(parent(m))[1])=>i for (m,i) in B)
 #     end
- 
+
 #     return Nr, B # Not actually a section, but whatever.
 # end
 
@@ -436,11 +461,11 @@ end
 
 #     the_ring = parent(P[1])
 #     @assert base_ring(the_ring) == FlintQQ
-    
+
 #     sing_R, sing_vars = Singular.PolynomialRing(Singular.QQ,
 #                                                 ["x$i" for i=1:nvars(the_ring)],
 #                                                 ordering=ordering(the_ring))
-    
+
 #     singular_B = kbase_gens_from_GB(map(f-> change_base_ring(f, Singular.QQ, sing_R), P))
 
 #     return map(f-> change_base_ring(f, Hecke.FlintQQ, the_ring), singular_B)
@@ -492,7 +517,7 @@ function change_parent(P, f)
         push_term!(fP, K(coeff), exp_vec)
     end
     return finish(fP)
-end 
+end
 
 
 @doc Markdown.doc"""
@@ -514,14 +539,14 @@ function kbase(P, ish)
     D = maximum(total_degree(f) for f in P)
     degree_range = ish ? D : 0:D
     mons = monomials_of_degree(parent(P[1]), degree_range)
-    
+
     divisible_by_LP_elt = f->any(iszero(rem(f, lp)) for lp in LP)
     return filter(!divisible_by_LP_elt, mons)
 end
 
 
 ######################################################################################################
-# 
+#
 #  Computing a numerically stable basis to compute the multiplication-by-xi operators.
 #
 ######################################################################################################
@@ -548,22 +573,22 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
     """
 
     sorted_column_labels = sort(collect(values(L0)))
-    
+
     F = padic_qr(transpose(N[sorted_column_labels,:]), col_pivot=Val(true))
     Qinv  = Dory.inv_unit_lower_triangular(F.Q)
     Fpinv = invperm(F.p)
 
     # X = transpose(Qinv[Fpinv,:])
     X = transpose(Qinv)[Fpinv,:]
-    
+
     #Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
 
-    
+
     # Next, extract the algebra basis.
     B = Dict()
     m = size(F.Q,1) # The dimension of the quotient algebra.
 
-    # Extract the column to monomial correspondence.    
+    # Extract the column to monomial correspondence.
     key_array = first.(sort(collect(L0), by=x->x[2]))
 
     for i in 1:m
@@ -576,10 +601,10 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{padic}, L0, ish)
     #test_rows = sorted_column_labels[F.q[1:m]]
     #@info "" test_rows
     #@info "" valuation.(Array(Nr[test_rows, :]))
-    
+
     return N*X, B
 end
-        
+
 @doc Markdown.doc"""
     iwasawa_step(N :: Hecke.Generic.MatSpaceElem{<:Dory.DiscreteValuedFieldElem}, L0)
 
@@ -590,13 +615,13 @@ function iwasawa_step(N :: Hecke.Generic.MatSpaceElem{<:Dory.DiscreteValuedField
 
     sorted_monomial_rows = sort(collect(values(L0)))
     Nkbase = N[sorted_monomial_rows, :]
-    
+
     F = padic_qr(transpose(Nkbase), col_pivot=Val(true))
     Qinv = Dory.inv_unit_lower_triangular(F.Q)
     Fpinv= invperm(F.p)
 
     X = Qinv[Fpinv,:]
     Farr = QRPadicArrayPivoted((F.Q.entries)[Fpinv,:], F.R.entries, F.q)
-    
+
     return Farr, N*X
 end
