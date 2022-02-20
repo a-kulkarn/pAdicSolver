@@ -1,16 +1,16 @@
-######################################################################################################
+###############################################################################################
 #
 #  Constant
 #
-######################################################################################################
+###############################################################################################
 
 const DEFAULT_VALUATION_OF_ZERO = BigInt(2^63-1)
 
-######################################################################################################
+###############################################################################################
 #
 #  Tropical shifting choices in QR iteration
 #
-######################################################################################################
+###############################################################################################
 
 # Function to feed into Dory.block_schur_form for optimal performance
 function tropical_shift(B)
@@ -18,22 +18,19 @@ function tropical_shift(B)
 end
 
 
-######################################################################################################
+###############################################################################################
 #
 #  Simultaneous Eigenvalues.
 #
-######################################################################################################
+###############################################################################################
 
 
 @doc Markdown.doc"""
-    simultaneous_eigenvalues(inputM :: Array{Array{T,2},1} where T <: FieldElem, ish::Bool, method)
-            -> eigenvalue_matrix :: Hecke.Generic.MatElem{T}
+    simultaneous_eigenvalues(M::Hecke.Generic.MatElem{T}, method=:power)
 
-(Internal function) Compute the eigenvalues of a list of commuting matrices, given as an array. In the
-specific case that the matrices are mult-by-coordinate-variable operators on R/I
-
-INPUTS: M -- list of commuting matrices corresponding to mult-by-xi operators
-Outputs: A matrix whose j-th column are the eigenvalues of the j-th matrix in M
+Compute the eigenvalues of a list `M` of commuting matrices. Unless `method = :tropical`, 
+the output is of type `Hecke.Generic.MatElem{T}`. If `method = :tropical`, then the output
+is of type `Array{TropicalInterval, 2}`.
 """
 function simultaneous_eigenvalues(M::Vector; method=:schur)
 
@@ -220,12 +217,14 @@ function simultaneous_eigenvalues(::Val{:tropical}, M::Vector)
             block = M[j][ran, ran]            
             sing_vals = singular_values(block)
 
-            # NOTE: It might be faster to look at traces of powers of the matrix and use Newton's identities.
+            # NOTE: It might be faster to look at traces of powers of the matrix and use
+            #       Newton's identities.
             
             #@info valuation.(sing_vals)
             
             # In any particular block, the valuations of the eigenvalues are equal.
-            # We need to check if the block has a kernel, as a special default value needs to be assigned.
+            # We need to check if the block has a kernel, as a special default value needs to
+            # be assigned.
 
             if zero(Qp) in sing_vals
                 val_of_eigenvalues = fmpq(precision(Qp))
