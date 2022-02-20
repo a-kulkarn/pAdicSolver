@@ -1,7 +1,6 @@
 
-
-#@testset "Interface test" begin
-if true
+@testset "Interface test" begin
+#if true
     Qp = PadicField(7, 20)
     L1, _ = LaurentSeriesField(GF(5), 15, "t")
     L2, _ = LaurentSeriesField(QQ, 5, "t")
@@ -25,9 +24,6 @@ if true
 
             # Test the main function with no keywords supplied.
             sol = solve_affine_system(P)
-
-            @info " " sol true_sol
-            
             @test solcmp(true_sol, sol)
 
             psol = solve_projective_system(Q)
@@ -37,8 +33,8 @@ if true
             gsol = solve_affine_groebner_system(P)
             @test solcmp(true_sol, gsol)
 
-            #gpsol = solve_projective_groebner_system(P)
-            #@test solcmp(true_sol_hom, gpsol)
+            gpsol = solve_projective_groebner_system(Q)
+            @test solcmp(true_sol_hom, gpsol)
 
             #######################
             # Test with keywords
@@ -48,19 +44,22 @@ if true
             method_opts = [:given_groebner, :given_GB, :givenGB]
 
             evmethod_opts = [:power, :inverse, :schur]
-            ordering_opts = [:lex, :revlex, :grevlex, :deglex]
+            ordering_opts = [:lex, :deglex, :degrevlex]
 
             for meth in method_opts for evmeth in evmethod_opts for ord in ordering_opts
 
                 test_series = "method = $meth, eigenvector_method = $evmeth, ordering = $ord"
                 @testset "Options: $test_series" begin
-                    sol = solve_affine_system(P, method = meth, eigenvector_method = evmeth)
+                    sol = solve_affine_system(P, method = meth, eigenvector_method = evmeth,
+                                              ordering = ord)
                     @test solcmp(true_sol, sol)
                     
-                    # psol = solve_projective_system(Q, method = meth,
-                    #                                eigenvector_method = evmeth,
-                    #                                ordering = ord)
-                    # @test solcmp(true_sol_hom, psol)
+                    psol = solve_projective_system(Q, method = meth,
+                                                   eigenvector_method = evmeth,
+                                                   ordering = ord)
+
+                    #@info " " psol
+                    @test solcmp(true_sol_hom, psol)
                 end
             end end end
 

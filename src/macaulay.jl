@@ -248,7 +248,7 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
     end
 
     # TODO: In theory this causes a bug.
-    @assert !missing_monomials
+    #@assert !missing_monomials
     
     # The idea of the QR step is two-fold:
     # 1: Choose a well-conditioned *monomial* basis for the algebra from a given spanning 
@@ -282,7 +282,8 @@ function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Gener
     the_ring = parent(P[1])
     K = base_ring(the_ring)
     X = gens(the_ring)
-    insert!(X, 1, the_ring(1))
+
+    is_homogeneous || insert!(X, 1, the_ring(1))
     
     # Ensure that the specified ordering is used for reduction/kbase.
     R, vars = PolynomialRing(K, length(gens(the_ring)), ordering=ordering)
@@ -291,19 +292,38 @@ function _multiplication_matrices(method::Val{:given_GB}, P::Array{<:Hecke.Gener
     # Determine the basis for the quotient algebra.
     BR = kbase(PR, is_homogeneous)
 
+    # TODO: Not sure of a great way to do this, but it might be nice to check if the
+    #       system has no solutions (geometrically).
+    
     # Construct the multiplication operators as polynomial elements.
     XR = [change_parent(R, v) for v in X]
     xi_operators = [[rem(v*b, PR) for b in BR] for v in XR]
-
+    
     if !(K isa Dory.DiscreteValuedField)
         # TODO: Figure out what the user should do in this case...
+        # TODO: This also seems like it can be moved to right after the GB computation.
         K = PadicField(29,30)
     end
 
-    #@info xi_operators
+    #@info " " xi_operators
+
+    # TODO: XXX:
+    # In the projective case, we want to do something slightly different than take
+    # coefficients. We actually need the coefficients of the resulting support,
+    # which is in one degree higher.
+
+    if !is_homogeneous
+        M = [matrix(K, [coeff(g, b) for b in BR, g in op]) for op in xi_operators]
+    else
+        img_basis = not_kbase(PR, maximum(total_degree.(PR))+1)
+
+        #@info " " BR img_basis leading_monomial.(PR)
+        M = [matrix(K, [coeff(g, b) for b in img_basis, g in op]) for op in xi_operators]
+
+        #@info " " [valuation.(m) for m in M]
+    end
     
-    M = [matrix(K, [coeff(g, b) for b in BR, g in op]) for op in xi_operators]
-    M = [m.entries for m in M]
+    M = [Matrix(m) for m in M]
 
     return M
 end
@@ -539,6 +559,23 @@ function kbase(P, ish)
     D = maximum(total_degree(f) for f in P)
     degree_range = ish ? D : 0:D
     mons = monomials_of_degree(parent(P[1]), degree_range)
+
+    divisible_by_LP_elt = f->any(iszero(rem(f, lp)) for lp in LP)
+    return filter(!divisible_by_LP_elt, mons)
+end
+
+function not_kbase(P, D)
+
+    # Do the some things as kbase, but specify the degree of the generated monomials in
+    # advance.
+
+    
+    # TODO: This code is not optimal since it generates more monomials than is necessary.
+    #       It is much more efficient to enumerate by degree and build up the basis via
+    #       multiplying by monomials.
+
+    LP = leading_monomial.(P)
+    mons = monomials_of_degree(parent(P[1]), D)
 
     divisible_by_LP_elt = f->any(iszero(rem(f, lp)) for lp in LP)
     return filter(!divisible_by_LP_elt, mons)
