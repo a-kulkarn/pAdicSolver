@@ -36,13 +36,13 @@ if OSCAR_UUID in keys(Pkg.dependencies())
         true_sol_hom = matrix(K, [eins -eins eins; eins eins eins])
 
         evmethod_opts = [:power, :inverse, :schur]
-        ordering_opts = [:lex, :revlex, :grevlex, :deglex]
+        ordering_opts = [:lex, :deglex, :degrevlex]
 
         for evmeth in evmethod_opts for ord in ordering_opts
 
             test_series = "eigenvector_method = $evmeth, ordering = $ord"
             @testset "Options: $test_series" begin
-                sol = solve_system(P, method=:groebner, eigenvector_method=evmeth)
+                sol = solve_system(P, method=:groebner, eigenvector_method=evmeth, ordering=ord)
                 @test solcmp(true_sol, sol)
             end
         end end

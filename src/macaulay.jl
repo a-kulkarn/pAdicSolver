@@ -92,8 +92,8 @@ function solve_affine_groebner_system(P; kwds...)
     return _solver_engine(P, false; method = :given_GB, kwds...)
 end
 
-function solve_projective_groebner_system(P; method = :given_GB, kwds...)
-    return _solver_engine(P, true; kwds...)
+function solve_projective_groebner_system(P; kwds...)
+    return _solver_engine(P, true; method = :given_GB, kwds...)
 end
 
 
