@@ -40,13 +40,11 @@
             # Test with keywords
 
             # Prepare the options dictionaries.
-            method_opts = [:truncated_normal_form, :tnf, :macaulay]
             method_opts = [:given_groebner, :given_GB, :givenGB]
-
             evmethod_opts = [:power, :inverse, :schur]
             ordering_opts = [:lex, :deglex, :degrevlex]
 
-            for meth in method_opts for evmeth in evmethod_opts for ord in ordering_opts
+            for meth in method_opts, evmeth in evmethod_opts, ord in ordering_opts
 
                 test_series = "method = $meth, eigenvector_method = $evmeth, ordering = $ord"
                 @testset "Options: $test_series" begin
@@ -61,8 +59,28 @@
                     #@info " " psol
                     @test solcmp(true_sol_hom, psol)
                 end
-            end end end
+            end
 
+            method_opts = [:truncated_normal_form, :tnf, :macaulay]
+            evmethod_opts = [:power, :inverse, :schur]
+
+            for meth in method_opts, evmeth in evmethod_opts
+
+                test_series = "method = $meth, eigenvector_method = $evmeth"
+                @testset "Options: $test_series" begin
+                    sol = solve_affine_system(P, method = meth, eigenvector_method = evmeth)
+                                              
+                    @test solcmp(true_sol, sol)
+                    
+                    psol = solve_projective_system(Q, method = meth,
+                                                   eigenvector_method = evmeth)
+
+                    #@info " " psol
+                    @test solcmp(true_sol_hom, psol)
+                end
+            end
+
+            
             #######################
             # Test tropical
 
