@@ -1,6 +1,6 @@
 
 
-@testset "Precision handling" begin
+@testset "Insufficient Precision Tests" begin
     p = 1000003
     N = 3
     K = Hecke.PadicField(p, N)

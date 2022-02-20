@@ -35,7 +35,6 @@
 
     @test min.(sol1) == min.(sol2) == true_solution
 
-
     Kx,(x1,x2,x3) = PolynomialRing(QQ,3)
     p = 32003
     p_adic_precision=29

@@ -75,14 +75,3 @@
     end
 end
 
-@testset "Basic plane curve tests" begin
-    # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
-    Qp = PadicField(491,3)
-
-    R, (x1, x2) = PolynomialRing(Qp, 2)
-    d = 10
-    P = random_square_system(R, d)
-    sol = solve_affine_system(P)
-    @test iszero(forward_error(P, sol))
-end
-
