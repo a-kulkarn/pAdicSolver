@@ -42,12 +42,10 @@ end
 
 @testset "Randomized Laurent systems" begin
 
-    K, t = LaurentSeriesRing(GF(5), 15, "t")
+    K, t = LaurentSeriesRing(GF(5), 5, "t")
     R, (x1, x2) = PolynomialRing(K, 2)
-    d = 10
+    d = 6
     P = random_square_system(R, d)
     sol = solve_affine_system(P)
     @test iszero(forward_error(P, sol))
-
-    
 end

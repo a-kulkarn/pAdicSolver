@@ -8,8 +8,8 @@
     test_series_name = Dict(Qp=>"pAdic", L1=>"Laurent (Fp)", L2=>"Laurent (QQ)")
 
     for K in [Qp, L1, L2]
-        if true
-        #@testset "Interface: $(test_series_name[K])" begin
+        @testset "Interface: $(test_series_name[K])" begin
+        #if true
             R, (x1, x2) = PolynomialRing(K, 2)
             R3, (y1, y2, y3) = PolynomialRing(K, 3)
             t = uniformizer(K)
@@ -63,6 +63,8 @@
                 end
             end end end
 
+            #######################
+            # Test tropical
 
             # tropsol = solve_affine_system(P, eigenvector_method=:tropical)
             # gsol = solve_affine_groebner_system(P, ordering=:lex, eigenvector_method=:schur)
@@ -77,24 +79,10 @@ end
     # For now, we need a fairly large prime. p=7 goes wrong fairly quickly.
     Qp = PadicField(491,3)
 
-    R, (x1, x2) = PolynomialRing(Qp, ["x1", "x2"])
+    R, (x1, x2) = PolynomialRing(Qp, 2)
     d = 10
     P = random_square_system(R, d)
     sol = solve_affine_system(P)
     @test iszero(forward_error(P, sol))
 end
 
-
-#=
-Some primes:
-2      3      5      7     11     13     17     19     23     29
-31     37     41     43     47     53     59     61     67     71
-73     79     83     89     97    101    103    107    109    113
-127    131    137    139    149    151    157    163    167    173
-179    181    191    193    197    199    211    223    227    229
-233    239    241    251    257    263    269    271    277    281
-283    293    307    311    313    317    331    337    347    349
-353    359    367    373    379    383    389    397    401    409
-419    421    431    433    439    443    449    457    461    463
-
-=#

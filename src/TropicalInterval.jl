@@ -3,6 +3,11 @@ struct TropicalInterval
     max::Union{Hecke.fmpq, AbstractFloat}
 end
 
+function TropicalInterval(x::Number, y::Number)
+    y == Inf && return TropicalInterval(fmpq(x), y)
+    return TropicalInterval(fmpq(x), fmpq(y))
+end
+
 import Base: min, max, minimum, maximum, ==
 
 # Access functions.

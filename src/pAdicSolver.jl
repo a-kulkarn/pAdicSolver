@@ -11,8 +11,13 @@ import Dory: nullspace
 # We might choose to add some functionality depending on Singular later.
 # import Singular
 
+export TropicalInterval
+export macaulay_mat, solve_macaulay, solve_affine_system, solve_projective_system
+export solve_affine_groebner_system, solve_projective_groebner_system, solve_system
+export abs_error, rel_error, forward_error, solcmp, random_square_system
 
-include("mindex.jl")
+
+#include("mindex.jl")
 include("matrix.jl")
 include("TropicalInterval.jl")
 include("simultaneous_eigen.jl")
