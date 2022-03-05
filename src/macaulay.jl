@@ -269,6 +269,8 @@ function _multiplication_matrices(method::Val{:tnf}, P::Array{<:Hecke.Generic.MP
         return M, F, B, N, Nr, R, IdL0, Idx
     end
 
+    @info " " rank(matrix(M[1])) elt_info.(N[[L[x] for x in X], :])
+    
     return M
 end
 

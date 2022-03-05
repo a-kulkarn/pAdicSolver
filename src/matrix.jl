@@ -96,12 +96,12 @@ end
 Constructs the sparse macaulay matrix defined by the polynomials `P` and degree bound `rho`. The argument `X`
 is a list of variables of the ambient polynomial ring used to construct the multiplier monomials. 
 """
-function macaulay_mat(P::Array{Hecke.Generic.MPoly{T},1},
-                      X::Array{Hecke.Generic.MPoly{T},1}, rho, ish) where T <: Hecke.RingElem
+function macaulay_mat(P::Vector{T},
+                      X::Vector{T}, rho, ish) where T <: Hecke.Generic.MPolyElem
 
     degrees = unique!(map(p->total_degree(p),P))
-    monomial_set    = Set{Hecke.Generic.MPoly{T}}()
-    mult_monomials  = Array{Array{Hecke.Generic.MPoly{T}}}(undef, maximum(degrees))
+    monomial_set    = Set{T}()
+    mult_monomials  = Array{Array{T}}(undef, maximum(degrees))
     
     for d in degrees
         if ish
